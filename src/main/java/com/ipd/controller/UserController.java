@@ -1,14 +1,16 @@
 package com.ipd.controller;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import com.ipd.Exception.ResourceNotFoundException;
 import com.user.entity.User;
+import com.user.enums.Role;
 import com.user.repository.UserRepository;
 
 
@@ -28,6 +30,12 @@ public class UserController {
 		User user = userRepository.findByEmail(getCurrentUsername())
                 .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
         return ResponseEntity.ok(user);
+    }
+	
+    // Get All Admins
+    @GetMapping("/admins")
+    public List<User> getAllAdmins() {
+        return userRepository.findByRole(Role.ADMIN);
     }
 
 }

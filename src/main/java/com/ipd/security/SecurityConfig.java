@@ -66,6 +66,8 @@ public class SecurityConfig {
                 registry.addMapping("/**")
                         .allowedOrigins(
                         		"http://localhost:5173",
+                        		"http://localhost:4000",
+                        		"http://localhost:5174",
                                 "http://localhost",
                                 "http://localhost:*",
                                 "http://127.0.0.1",

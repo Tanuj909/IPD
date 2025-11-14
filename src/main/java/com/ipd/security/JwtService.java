@@ -58,6 +58,8 @@ package com.ipd.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
@@ -66,7 +68,8 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    private final String SECRET = "thisisaverysecurejwtkeyforhospitalproject123456"; // min 256 bits
+	@Value("${jwt.secret}")
+    private String SECRET ;
     private final long EXPIRATION = 1000 * 60 * 60 * 24; // 1 day
 
     private Key getSignKey() {

@@ -76,10 +76,8 @@ public class IpdHospitalServiceImpl implements IpdHospitalService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         IpdHospital hospital = hospitalRepository.findById(hospitalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hospital not found"));
-
         user.setIpdHospitalId(hospital.getId());
         userRepository.save(user);
-
         return hospital;
     }
 

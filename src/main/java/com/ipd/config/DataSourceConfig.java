@@ -74,7 +74,7 @@ public class DataSourceConfig {
 
         LocalContainerEntityManagerFactoryBean emf = new LocalContainerEntityManagerFactoryBean();
         emf.setDataSource(dataSource);
-        emf.setPackagesToScan("com.user.entity");
+        emf.setPackagesToScan("com.user.entity", "com.ipd.entity");
         emf.setPersistenceUnitName("userPU");
         emf.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
 

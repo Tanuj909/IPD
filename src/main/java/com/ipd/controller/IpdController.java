@@ -1,9 +1,12 @@
 package com.ipd.controller;
 
 import com.ipd.entity.IpdHospital;
+import com.ipd.entity.IpdMedication;
+import com.user.entity.Doctor;
 import com.user.entity.Patient;
 import com.user.entity.User;
 import com.ipd.dto.AdmissionChartPoint;
+import com.ipd.dto.DoctorVisitDTO;
 import com.ipd.dto.IpdBillingDetailsResponse;
 import com.ipd.dto.IpdDashboardSummary;
 import com.ipd.dto.IpdPaymentRequestDTO;
@@ -11,18 +14,26 @@ import com.ipd.dto.IpdRecommendationCreateDTO;
 import com.ipd.dto.IpdRecommendationResponseDTO;
 import com.ipd.entity.IpdAdmission;
 import com.ipd.entity.IpdBilling;
+import com.ipd.entity.IpdDoctorVisit;
 import com.ipd.entity.IpdModuleSetting;
 import com.ipd.entity.IpdRoom;
+import com.ipd.entity.IpdServiceRendered;
+import com.user.repository.DoctorRepository;
 import com.user.repository.PatientRepository;
 import com.user.repository.UserRepository;
 import com.ipd.Exception.AccessDeniedException;
 import com.ipd.Exception.ResourceNotFoundException;
+import com.ipd.repository.DoctorVisitRepository;
+import com.ipd.repository.IpdAdmissionRepository;
 import com.ipd.repository.IpdBillingRepository;
 import com.ipd.repository.IpdHospitalRepository;
+import com.ipd.repository.IpdMedicationRepository;
 import com.ipd.repository.IpdModuleSettingRepository;
+import com.ipd.repository.IpdServiceRepository;
 import com.ipd.service.BillingIntegrationService;
 import com.ipd.service.IpdRecommendationService;
 import com.ipd.service.IpdService;
+import com.ipd.service.IpdTrackingService;
 
 import jakarta.validation.Valid;
 
@@ -33,6 +44,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -63,6 +75,20 @@ public class IpdController {
     
     @Autowired
     private BillingIntegrationService billingIntegrationService;
+    
+    @Autowired
+    private DoctorVisitRepository visitRepo;
+    
+    @Autowired
+    private DoctorRepository doctorRepository;
+    
+    @Autowired private IpdServiceRepository serviceRepo;
+    @Autowired private IpdMedicationRepository medRepo;
+    @Autowired private IpdAdmissionRepository admissionRepo;
+    
+ // ADD AUTOWIRED
+    @Autowired
+    private IpdTrackingService trackingService;
 
 
     // Admit patient
@@ -79,9 +105,69 @@ public class IpdController {
 
     // Genrate Bill patient
     @PostMapping("/generate-bill/{admissionId}")
-    public ResponseEntity<IpdAdmission> dischargePatient(@PathVariable Long admissionId) {
+    public ResponseEntity<IpdAdmission> generateBilling(@PathVariable Long admissionId) {
         IpdAdmission discharged = ipdService.generateBilling(admissionId);
         return ResponseEntity.ok(discharged);
+    }
+    
+    
+    @PostMapping("/visit/{admissionId}")
+//    @PreAuthorize("hasRole('DOCTOR','NURSE', 'ADMIN')")
+    public ResponseEntity<IpdDoctorVisit> addDoctorVisit(
+            @PathVariable Long admissionId,
+            @RequestParam Long doctorId,
+            @RequestParam Double fee,
+            @RequestParam(required = false) String notes) {
+        return ResponseEntity.ok(trackingService.addDoctorVisit(admissionId, doctorId, fee, notes));
+    }
+
+    @PostMapping("/medication/{admissionId}")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'NURSE' , 'ADMIN')")
+    public ResponseEntity<IpdMedication> addMedication(
+            @PathVariable Long admissionId,
+            @RequestParam String medicineName,
+            @RequestParam Integer quantity,
+            @RequestParam Double pricePerUnit) {
+        return ResponseEntity.ok(trackingService.addMedication(admissionId, medicineName, quantity, pricePerUnit));
+    }
+
+    @PostMapping("/service/{admissionId}")
+    @PreAuthorize("hasAnyRole('DOCTOR', 'NURSE', 'ADMIN')")
+    public ResponseEntity<IpdServiceRendered> addService(
+            @PathVariable Long admissionId,
+            @RequestParam String serviceType,
+            @RequestParam String description,
+            @RequestParam Double charge) {
+        return ResponseEntity.ok(trackingService.addService(admissionId, serviceType, description, charge));
+    }
+    
+ // ================= IPD TRACKING GET APIs =================
+
+    @GetMapping("/visit/{admissionId}")
+    @PreAuthorize("hasAnyRole('DOCTOR','NURSE','ADMIN')")
+    public ResponseEntity<List<IpdDoctorVisit>> getDoctorVisits(@PathVariable Long admissionId) {
+        return ResponseEntity.ok(trackingService.getDoctorVisits(admissionId));
+    }
+
+    @GetMapping("/medication/{admissionId}")
+    @PreAuthorize("hasAnyRole('DOCTOR','NURSE','ADMIN')")
+    public ResponseEntity<List<IpdMedication>> getMedications(@PathVariable Long admissionId) {
+        return ResponseEntity.ok(trackingService.getMedications(admissionId));
+    }
+
+    @GetMapping("/service/{admissionId}")
+    @PreAuthorize("hasAnyRole('DOCTOR','NURSE','ADMIN')")
+    public ResponseEntity<List<IpdServiceRendered>> getServices(@PathVariable Long admissionId) {
+        return ResponseEntity.ok(trackingService.getServices(admissionId));
+    }
+
+    
+    
+    // IPD payment
+    @PostMapping("/payment")
+    public ResponseEntity<String> makePayment(@RequestBody IpdPaymentRequestDTO request) {	
+        String result = ipdService.processPayment(request); 
+        return ResponseEntity.ok(result);
     }
     
     //This Discharge API is only  
@@ -91,11 +177,7 @@ public class IpdController {
     	return ResponseEntity.ok("Patient discharged successfully!");
     }
     
-    @PostMapping("/payment")
-    public ResponseEntity<String> makePayment(@RequestBody IpdPaymentRequestDTO request) {	
-        String result = ipdService.processPayment(request); 
-        return ResponseEntity.ok(result);
-    }
+
     
     @GetMapping("/billing-details/{admissionId}")
     public ResponseEntity<IpdBillingDetailsResponse> getBilling(@PathVariable Long admissionId) {

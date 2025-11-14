@@ -1,6 +1,8 @@
 package com.ipd.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -11,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import lombok.Getter;
 import lombok.Setter;
@@ -52,5 +55,18 @@ public class IpdAdmission {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+ // ADD THESE FIELDS
+    @OneToMany(mappedBy = "admission", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<IpdDoctorVisit> doctorVisits = new ArrayList<>();
+
+    @OneToMany(mappedBy = "admission", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<IpdMedication> medications = new ArrayList<>();
+
+    @OneToMany(mappedBy = "admission", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<IpdServiceRendered> servicesRendered = new ArrayList<>();
     
 }

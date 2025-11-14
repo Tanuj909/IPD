@@ -24,6 +24,7 @@ public class AuthController {
 
     @Autowired
     private JwtService jwtUtil;
+    
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
@@ -45,4 +46,5 @@ public class AuthController {
 
         return ResponseEntity.ok(new AuthResponse(token));
     }
+    
 }

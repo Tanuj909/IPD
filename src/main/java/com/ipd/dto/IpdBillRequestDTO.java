@@ -20,5 +20,19 @@ public class IpdBillRequestDTO {
     private Long daysAdmitted;
     private double miscellaneousCharges;
     private PaymentStauts paymentStatus;
+	public void setProcedureCharges(double procedureCharges) {
+		// TODO Auto-generated method stub
+		
+	}
+	public void setDiscountPercentage(double d) {
+		// TODO Auto-generated method stub
+		
+	}
+	public void setGstPercentage(double d) {
+		// TODO Auto-generated method stub
+		
+	}
+    
+    
 
 }

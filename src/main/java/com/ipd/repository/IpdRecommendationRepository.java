@@ -4,11 +4,15 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.user.entity.Doctor;
 import com.ipd.entity.IpdHospital;
-import com.user.entity.Patient;
 import com.ipd.entity.IpdRecommendation;
 import com.ipd.entity.IpdRecommendationStatus;
+
+//import com.user.entity.Doctor;
+//import com.ipd.entity.IpdHospital;
+//import com.user.entity.Patient;
+//import com.ipd.entity.IpdRecommendation;
+//import com.ipd.entity.IpdRecommendationStatus;
 
 public interface IpdRecommendationRepository extends JpaRepository<IpdRecommendation, Long>{
 	
