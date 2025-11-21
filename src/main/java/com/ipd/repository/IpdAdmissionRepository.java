@@ -33,6 +33,14 @@ public interface IpdAdmissionRepository extends JpaRepository<IpdAdmission, Long
     List<Object[]> countAdmissionsByDateRange(@Param("hospitalId") Long hospitalId,
                                               @Param("from") LocalDateTime from,
                                               @Param("to") LocalDateTime to);
+
+
+//    @Query("""
+//            SELECT a FROM IpdAdmission a 
+//            WHERE a.isDischarged = false 
+//            AND a.outcome = true
+//        """)
+	List<IpdAdmission> findByIsOutcomeCreatedTrueAndIsDischargedFalse();
     
 
 }

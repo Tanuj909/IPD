@@ -39,6 +39,7 @@ import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -111,6 +112,13 @@ public class IpdController {
     }
     
     
+    //Update Billing
+    @PostMapping("/regenerate-bill/{admissionId}")
+    public ResponseEntity<String> regenerateBill(@PathVariable Long admissionId) {
+        ipdService.regenerateBill(admissionId);
+        return ResponseEntity.ok("Bill updated successfully for admission ID: " + admissionId);
+    }
+    
     @PostMapping("/visit/{admissionId}")
 //    @PreAuthorize("hasRole('DOCTOR','NURSE', 'ADMIN')")
     public ResponseEntity<IpdDoctorVisit> addDoctorVisit(
@@ -159,6 +167,13 @@ public class IpdController {
     @PreAuthorize("hasAnyRole('DOCTOR','NURSE','ADMIN')")
     public ResponseEntity<List<IpdServiceRendered>> getServices(@PathVariable Long admissionId) {
         return ResponseEntity.ok(trackingService.getServices(admissionId));
+    }
+    
+    
+    @GetMapping("/admissions/discharge")
+    public ResponseEntity<List<IpdAdmission>> getDischargeAdmissions() {
+        List<IpdAdmission> admissions = ipdService.getAllDischargeAdmissionsForHospital();
+        return ResponseEntity.ok(admissions);
     }
 
     
@@ -224,6 +239,15 @@ public class IpdController {
     public ResponseEntity<List<IpdRoom>> getAvailableRooms() {
         List<IpdRoom> rooms = ipdService.getAvailableRooms();
         return ResponseEntity.ok(rooms);
+    }
+    
+    @GetMapping("/rooms/availableid")
+    public ResponseEntity<Long> getAvailableRoomId() {
+        Long roomId = ipdService.findFirstAvailableRoomId();
+        if (roomId == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+        return ResponseEntity.ok(roomId);
     }
     
     @GetMapping("/rooms/{roomNumber}")

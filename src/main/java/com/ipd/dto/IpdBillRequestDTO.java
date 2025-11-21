@@ -14,24 +14,16 @@ public class IpdBillRequestDTO {
     private double roomRatePerDay;
     private double doctorFee;
     private double medicationCharges;
+    private double procedureCharges;
     private double nursingCharges;
     private double diagnosticCharges;
     private double foodCharges;
     private Long daysAdmitted;
     private double miscellaneousCharges;
     private PaymentStauts paymentStatus;
-	public void setProcedureCharges(double procedureCharges) {
-		// TODO Auto-generated method stub
-		
-	}
-	public void setDiscountPercentage(double d) {
-		// TODO Auto-generated method stub
-		
-	}
-	public void setGstPercentage(double d) {
-		// TODO Auto-generated method stub
-		
-	}
+    private double discountPercentage;   // e.g. 10.0
+    private double gstPercentage;
+ 
     
     
 

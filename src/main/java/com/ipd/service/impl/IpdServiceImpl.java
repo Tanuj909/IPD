@@ -11,6 +11,7 @@ import com.user.repository.UserRepository;
 import com.ipd.dto.AdmissionChartPoint;
 import com.ipd.dto.IpdBillGenerationRequestDTO;
 import com.ipd.dto.IpdBillRequestDTO;
+import com.ipd.dto.IpdBillUpdateRequestDTO;
 import com.ipd.dto.IpdDashboardSummary;
 import com.ipd.dto.IpdPaymentRequestDTO;
 import com.ipd.repository.*;
@@ -22,6 +23,7 @@ import com.ipd.service.IpdTrackingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -79,7 +81,7 @@ public class IpdServiceImpl implements IpdService {
     @Autowired
     private  IpdMedicationRepository medicationRepo;
     
-    private static final String IPD_BASE_URL = "http://147.93.28.8:3005/api/ipd";
+    private static final String IPD_BASE_URL = "http://localhost:3005/api/ipd";
     
  // ADD AUTOWIRED
     @Autowired
@@ -186,6 +188,8 @@ public class IpdServiceImpl implements IpdService {
 
         return ipdAdmissionRepo.save(savedAdmission);
     }
+    
+    
 
     @Override
     public List<IpdAdmission> getAllAdmissionsForCurrentHospital() {
@@ -357,7 +361,7 @@ public class IpdServiceImpl implements IpdService {
 //        request.setGstPercentage(18.0);
 //
 //        // === CALL BILLING API ===
-//        String url = "http://147.93.28.8:3005/api/billing/ipd/generate-bill";
+//        String url = "http://localhost/api/billing/ipd/generate-bill";
 //        ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
 //        System.out.println("Billing API Response: " + response.getBody());
 //
@@ -461,9 +465,11 @@ public class IpdServiceImpl implements IpdService {
         request.setMiscellaneousCharges(miscellaneousCharges);
         request.setDiscountPercentage(pricing.getDiscountPercentage());
         request.setGstPercentage(pricing.getGstPercentage());
-
+        
+        System.out.println(pricing.getDiscountPercentage());
+ 
         // === CALL BILLING API ===
-        String url = "http://147.93.28.8:3005/api/billing/ipd/generate-bill";
+        String url = "http://localhost:3005/api/billing/ipd/generate-bill";
         ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
         System.out.println("Billing API Response: " + response.getBody());
 
@@ -471,7 +477,74 @@ public class IpdServiceImpl implements IpdService {
     }
     
     
-//    //This method is called by the Billing module
+    @Override
+    @Transactional
+    public void regenerateBill(Long admissionId) {
+        IpdAdmission admission = ipdAdmissionRepo.findById(admissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Admission not found"));
+
+        if (admission.isDischarged()) {
+            throw new IllegalStateException("Cannot regenerate bill for discharged patient");
+        }
+
+        IpdHospitalPricing pricing = pricingRepo.findByHospital_Id(admission.getHospital().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Hospital pricing not configured"));
+
+        LocalDate admissionDate = admission.getAdmissionDate().toLocalDate();
+        LocalDate today = LocalDate.now();
+
+        // Aggregate current granular charges from DB (already updated in real-time)
+        List<IpdMedication> meds = medicationRepo.findByAdmissionId(admissionId);
+        List<IpdServiceRendered> services = serviceRepo.findByAdmissionId(admissionId);
+
+        double medicationCharges = meds.stream()
+                .mapToDouble(m -> m.getQuantity() * m.getPricePerUnit())
+                .sum();
+
+        double extraProcedure = services.stream()
+                .filter(s -> "PROCEDURE".equalsIgnoreCase(s.getServiceType()))
+                .mapToDouble(IpdServiceRendered::getCharge).sum();
+
+        double extraMisc = services.stream()
+                .filter(s -> !"PROCEDURE".equalsIgnoreCase(s.getServiceType()))
+                .mapToDouble(IpdServiceRendered::getCharge).sum();
+
+        Doctor doctor = doctorRepo.findById(admission.getDoctorId())
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
+        double doctorFee = doctor.getConsultationFee();
+
+        // Build update request
+        IpdBillUpdateRequestDTO request = new IpdBillUpdateRequestDTO();
+        request.setAdmissionId(admissionId);
+        request.setPatientExternalId(admission.getPatientId());
+        request.setHospitalExternalId(admission.getHospital().getId());
+        request.setAdmissionDate(admissionDate);
+        request.setDischargeDate(today);
+        request.setRoomRatePerDay(admission.getRoom().getPrice());
+
+        request.setNursingChargesPerDay(pricing.getNursingFee());
+        request.setFoodChargesPerDay(pricing.getFoodFee());
+        request.setDiagnosticChargesPerDay(pricing.getDiagnosticFee());
+        request.setMiscChargesPerDay(pricing.getMiscellaneousFee());
+
+        request.setMedicationCharges(medicationCharges);
+        request.setDoctorFee(doctorFee);
+        request.setProcedureCharges(extraProcedure);
+        request.setExtraServiceCharges(extraMisc);
+
+        request.setDiscountPercentage(pricing.getDiscountPercentage());
+        request.setGstPercentage(pricing.getGstPercentage());
+
+        // Call Billing Module
+        String url = "http://localhost:3005/api/billing/ipd/update-bill";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<IpdBillUpdateRequestDTO> entity = new HttpEntity<>(request, headers);
+
+        restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
+    }
+    
+    //This method is called by the Billing module
 //    @Transactional
 //    @Override
 //    public IpdAdmission generateBilling(Long admissionId) {
@@ -518,18 +591,18 @@ public class IpdServiceImpl implements IpdService {
 //
 //        // ✅ Step 2: Call Billing Service API
 ////        RestTemplate restTemplate = new RestTemplate();
-//        String billingApiUrl = "http://147.93.28.8:3005/api/billing/ipd/generate-bill";
+//        String billingApiUrl = "http://localhost:3005/api/billing/ipd/generate-bill";
 //        ResponseEntity<String> billingResponse =
 //                restTemplate.postForEntity(billingApiUrl, request, String.class);
 //        System.out.println("Billing generated: " + billingResponse.getBody());
 //        return ipdAdmissionRepo.save(admission);
 //    }
-    
+//    
 
     //---------------------------------
     @Override
     public String processPayment(IpdPaymentRequestDTO request) {
-        String billingApiUrl = "http://147.93.28.8:3005/api/billing/ipd/payment";
+        String billingApiUrl = "http://localhost:3005/api/billing/ipd/payment";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -553,7 +626,7 @@ public class IpdServiceImpl implements IpdService {
          }
          
          // ✅ Step 1: Verify Payment from Billing Module before discharging
-         String billingApiUrl = "http://147.93.28.8:3005/api/billing/ipd/status?admissionId=" + admissionId;
+         String billingApiUrl = "http://localhost:3005/api/billing/ipd/status?admissionId=" + admissionId;
          
          ResponseEntity<String> response = restTemplate.getForEntity(billingApiUrl, String.class);
          
@@ -573,7 +646,21 @@ public class IpdServiceImpl implements IpdService {
          ipdAdmissionRepo.save(admission);
     }
     
-
+    @Override
+    public List<IpdAdmission> getAllDischargeAdmissionsForHospital() {
+        checkIpdModuleAccess();
+ 
+        IpdHospital hospital = hospitalRepository.findById(getCurrentUser().getIpdHospitalId()).orElseThrow();
+        List<IpdAdmission> allAdmissions = ipdAdmissionRepo.findByHospitalId(hospital.getId());
+ 
+        List<IpdAdmission> activeAdmissions = new ArrayList<>();
+        for (IpdAdmission admission : allAdmissions) {
+            if (admission.isDischarged()) {
+                activeAdmissions.add(admission);
+            }
+        }
+        return activeAdmissions;
+    }
 //------------------------------
     @Override
     public IpdBilling getBillingByAdmission(Long admissionId) {
@@ -623,6 +710,20 @@ public class IpdServiceImpl implements IpdService {
 
         Long hospitalId = getCurrentUser().getIpdHospitalId();
         return ipdRoomRepo.findAvailableRoomsByHospital(hospitalId);
+    }
+    
+    @Override
+    public Long findFirstAvailableRoomId() {
+        //  Get all available rooms for current hospital
+        List<IpdRoom> availableRooms = getAvailableRooms();
+ 
+        //  If none available, return null
+        if (availableRooms == null || availableRooms.isEmpty()) {
+            return null;
+        }
+ 
+        // Return first available room’s ID
+        return availableRooms.get(0).getId();
     }
 
     @Override

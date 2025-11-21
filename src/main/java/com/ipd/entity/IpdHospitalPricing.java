@@ -23,6 +23,7 @@ public class IpdHospitalPricing {
     private double foodFee;
     private double diagnosticFee;
     private double miscellaneousFee;
+    private double medicationFee;
 
     // ----- GLOBAL SETTINGS -----
     private double discountPercentage;   // e.g. 10.0

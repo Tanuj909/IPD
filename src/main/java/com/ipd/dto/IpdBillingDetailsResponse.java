@@ -1,6 +1,7 @@
 package com.ipd.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class IpdBillingDetailsResponse {
 
@@ -17,8 +18,15 @@ public class IpdBillingDetailsResponse {
     private Double miscellaneousCharges;
     private Integer daysAdmitted;
     private Double total;
+    private Double discountPercentage;
+    private Double discountAmount;
+    private Double gstPercentage;
+    private Double gstAmount;
+    private Double totalBeforeDiscount;
+    private Double totalAfterDiscountAndGst;
+    private List<IPDServiceUsageDTO> ipdServices;  // NEW: Add this field to match the JSON
 
-    // Inner DTO for BillingMaster
+    // Inner DTO for BillingMaster (unchanged)
     public static class BillingMasterDTO {
         private Long id;
         private Long hospitaExternallId;
@@ -30,7 +38,7 @@ public class IpdBillingDetailsResponse {
         private String paymentMode;
         private LocalDateTime billingDate;
 
-        // Getters and Setters
+        // Getters and Setters (unchanged)
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
         public Long getHospitaExternallId() { return hospitaExternallId; }
@@ -51,7 +59,31 @@ public class IpdBillingDetailsResponse {
         public void setBillingDate(LocalDateTime billingDate) { this.billingDate = billingDate; }
     }
 
-    // Getters and Setters for outer class
+    // NEW: Nested DTO for each service item (matches the JSON structure)
+    public static class IPDServiceUsageDTO {
+        private Long id;
+        private String serviceName;
+        private Double price;
+        private Integer quantity;
+        private Double totalAmount;
+        private LocalDateTime serviceAddDate;
+
+        // Getters and Setters
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+        public String getServiceName() { return serviceName; }
+        public void setServiceName(String serviceName) { this.serviceName = serviceName; }
+        public Double getPrice() { return price; }
+        public void setPrice(Double price) { this.price = price; }
+        public Integer getQuantity() { return quantity; }
+        public void setQuantity(Integer quantity) { this.quantity = quantity; }
+        public Double getTotalAmount() { return totalAmount; }
+        public void setTotalAmount(Double totalAmount) { this.totalAmount = totalAmount; }
+        public LocalDateTime getServiceAddDate() { return serviceAddDate; }
+        public void setServiceAddDate(LocalDateTime serviceAddDate) { this.serviceAddDate = serviceAddDate; }
+    }
+
+    // Getters and Setters for outer class (add the new ones for ipdServices)
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public BillingMasterDTO getBillingMaster() { return billingMaster; }
@@ -78,4 +110,18 @@ public class IpdBillingDetailsResponse {
     public void setDaysAdmitted(Integer daysAdmitted) { this.daysAdmitted = daysAdmitted; }
     public Double getTotal() { return total; }
     public void setTotal(Double total) { this.total = total; }
+    public Double getDiscountPercentage() { return discountPercentage; }
+    public void setDiscountPercentage(Double discountPercentage) { this.discountPercentage = discountPercentage; }
+    public Double getDiscountAmount() { return discountAmount; }
+    public void setDiscountAmount(Double discountAmount) { this.discountAmount = discountAmount; }
+    public Double getGstPercentage() { return gstPercentage; }
+    public void setGstPercentage(Double gstPercentage) { this.gstPercentage = gstPercentage; }
+    public Double getGstAmount() { return gstAmount; }
+    public void setGstAmount(Double gstAmount) { this.gstAmount = gstAmount; }
+    public Double getTotalBeforeDiscount() { return totalBeforeDiscount; }
+    public void setTotalBeforeDiscount(Double totalBeforeDiscount) { this.totalBeforeDiscount = totalBeforeDiscount; }
+    public Double getTotalAfterDiscountAndGst() { return totalAfterDiscountAndGst; }
+    public void setTotalAfterDiscountAndGst(Double totalAfterDiscountAndGst) { this.totalAfterDiscountAndGst = totalAfterDiscountAndGst; }
+    public List<IPDServiceUsageDTO> getIpdServices() { return ipdServices; }  // NEW
+    public void setIpdServices(List<IPDServiceUsageDTO> ipdServices) { this.ipdServices = ipdServices; }  // NEW
 }

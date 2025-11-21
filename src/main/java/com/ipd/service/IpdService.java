@@ -15,6 +15,8 @@ public interface IpdService {
     IpdAdmission admitPatient(Long patientId, Long doctorId, Long roomId, String reason);
 
     IpdAdmission generateBilling(Long admissionId);
+    
+    void regenerateBill(Long admissionId);
 //    String generateBill(Long admissionId);
     
     void dischargeAfterPayment(Long admissionId);
@@ -52,6 +54,10 @@ public interface IpdService {
 	IpdAdmission admitFromRecommendation(Long recommendationId, Long roomId, String reason);
 	
 	String processPayment(IpdPaymentRequestDTO request);
+
+	Long findFirstAvailableRoomId();
+
+	List<IpdAdmission> getAllDischargeAdmissionsForHospital();
 
 //	DoctorVisit addDoctorVisit(Long admissionId, Long doctorId);
 

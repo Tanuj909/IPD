@@ -15,7 +15,7 @@ public class BillingIntegrationServiceImpl implements BillingIntegrationService{
 
 	@Override
 	public IpdBillingDetailsResponse getBillingDetails(Long admissionId) {
-        String url = "http://147.93.28.8:3005/api/billing/details/" + admissionId;
+        String url = "http://localhost:3005/api/billing/details/" + admissionId;
         return restTemplate.getForObject(url, IpdBillingDetailsResponse.class);
 	}
 	

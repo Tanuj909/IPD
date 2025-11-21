@@ -30,6 +30,9 @@ public class IpdAdmission {
     private LocalDateTime admissionDate;
     private LocalDateTime dischargeDate;
     private boolean isDischarged;
+    @Column(columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean isOutcomeCreated;
+
     
     @Column(name="patient_id")
     private Long patientId;
@@ -68,5 +71,17 @@ public class IpdAdmission {
     @OneToMany(mappedBy = "admission", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<IpdServiceRendered> servicesRendered = new ArrayList<>();
+    
+ // ⭐ NEW: Treatment updates by doctor/nurse
+    @OneToMany(mappedBy = "admission", cascade = CascadeType.ALL)
+    private List<IpdTreatmentUpdate> treatmentUpdates;
+
+    // ⭐ NEW: Discharge Summary
+    @OneToOne(mappedBy = "admission", cascade = CascadeType.ALL)
+    private IpdDischargeSummary dischargeSummary;
+
+    // ⭐ NEW: Outcome (Normal / Death / Referred / LAMA etc.)
+    @OneToOne(mappedBy = "admission", cascade = CascadeType.ALL)
+    private IpdOutcome outcome;
     
 }
