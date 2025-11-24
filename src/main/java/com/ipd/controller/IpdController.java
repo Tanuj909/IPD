@@ -6,6 +6,7 @@ import com.user.entity.Doctor;
 import com.user.entity.Patient;
 import com.user.entity.User;
 import com.ipd.dto.AdmissionChartPoint;
+import com.ipd.dto.DoctorFeesResponseDTO;
 import com.ipd.dto.DoctorVisitDTO;
 import com.ipd.dto.IpdBillingDetailsResponse;
 import com.ipd.dto.IpdDashboardSummary;
@@ -31,6 +32,7 @@ import com.ipd.repository.IpdMedicationRepository;
 import com.ipd.repository.IpdModuleSettingRepository;
 import com.ipd.repository.IpdServiceRepository;
 import com.ipd.service.BillingIntegrationService;
+import com.ipd.service.DoctorVisitService;
 import com.ipd.service.IpdRecommendationService;
 import com.ipd.service.IpdService;
 import com.ipd.service.IpdTrackingService;
@@ -83,6 +85,9 @@ public class IpdController {
     @Autowired
     private DoctorRepository doctorRepository;
     
+    @Autowired
+    private DoctorVisitService doctorVisitService;
+    
     @Autowired private IpdServiceRepository serviceRepo;
     @Autowired private IpdMedicationRepository medRepo;
     @Autowired private IpdAdmissionRepository admissionRepo;
@@ -127,6 +132,29 @@ public class IpdController {
             @RequestParam Double fee,
             @RequestParam(required = false) String notes) {
         return ResponseEntity.ok(trackingService.addDoctorVisit(admissionId, doctorId, fee, notes));
+    }
+
+ // Get all visits for an admission (to see current counts)
+    @GetMapping("/admission/{admissionId}")
+    public ResponseEntity<List<IpdDoctorVisit>> getVisitsByAdmission(@PathVariable Long admissionId) {
+        List<IpdDoctorVisit> visits = doctorVisitService.getVisitsByAdmission(admissionId);
+        return ResponseEntity.ok(visits);
+    }
+    
+    // Update visit count for a specific doctor visit
+    @PutMapping("/{visitId}/update-count")
+    public ResponseEntity<IpdDoctorVisit> updateVisitCount(
+            @PathVariable Long visitId,
+            @RequestParam Integer visitCount) {
+        IpdDoctorVisit updatedVisit = doctorVisitService.updateVisitCount(visitId, visitCount);
+        return ResponseEntity.ok(updatedVisit);
+    }
+    
+    // NEW: API to calculate and view doctor fees breakdown
+    @GetMapping("/calculate-doctor-fees/{admissionId}")
+    public ResponseEntity<Double> calculateDoctorFees(@PathVariable Long admissionId) {
+        Double response = doctorVisitService.calculateTotalDoctorFees(admissionId);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/medication/{admissionId}")

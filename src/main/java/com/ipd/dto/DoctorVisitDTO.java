@@ -11,4 +11,5 @@ import java.time.LocalDateTime;
 public class DoctorVisitDTO {
     private LocalDateTime visitDate;
     private double fee;
+    private Long totalVisits;   // <-- add this
 }

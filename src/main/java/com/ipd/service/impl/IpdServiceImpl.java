@@ -9,7 +9,6 @@ import com.user.repository.DoctorRepository;
 import com.user.repository.PatientRepository;
 import com.user.repository.UserRepository;
 import com.ipd.dto.AdmissionChartPoint;
-import com.ipd.dto.IpdBillGenerationRequestDTO;
 import com.ipd.dto.IpdBillRequestDTO;
 import com.ipd.dto.IpdBillUpdateRequestDTO;
 import com.ipd.dto.IpdDashboardSummary;
@@ -17,7 +16,7 @@ import com.ipd.dto.IpdPaymentRequestDTO;
 import com.ipd.repository.*;
 import com.ipd.Exception.AccessDeniedException;
 import com.ipd.Exception.ResourceNotFoundException;
-import com.ipd.service.BillingIntegrationService;
+import com.ipd.service.DoctorVisitService;
 import com.ipd.service.IpdService;
 import com.ipd.service.IpdTrackingService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,7 +80,10 @@ public class IpdServiceImpl implements IpdService {
     @Autowired
     private  IpdMedicationRepository medicationRepo;
     
-    private static final String IPD_BASE_URL = "http://localhost:3005/api/ipd";
+    @Autowired
+    private DoctorVisitService doctorVisitService;
+    
+    private static final String IPD_BASE_URL = "http://147.93.28.8:3005/api/ipd";
     
  // ADD AUTOWIRED
     @Autowired
@@ -397,10 +399,13 @@ public class IpdServiceImpl implements IpdService {
 
         // === DOCTOR VISITS ===
 //        double doctorFees = visits.stream().mapToDouble(IpdDoctorVisit::getFee).sum();
-       long doctorId = admission.getDoctorId();
-       
-       Doctor doctor = doctorRepo.findById(doctorId).orElseThrow(()-> new ResourceNotFoundException("Doctor not found"));
-       double doctorFee = doctor.getConsultationFee();
+//       long doctorId = admission.getDoctorId();
+//       
+//       Doctor doctor = doctorRepo.findById(doctorId).orElseThrow(()-> new ResourceNotFoundException("Doctor not found"));
+//       double doctorFee = doctor.getConsultationFee() * daysAdmitted;
+        
+     // NEW CORRECT WAY — uses actual recorded visits + counts
+        double doctorFee = doctorVisitService.calculateTotalDoctorFees(admissionId) * daysAdmitted;
        
 
         // === MEDICATIONS (from tracking) ===
@@ -469,13 +474,12 @@ public class IpdServiceImpl implements IpdService {
         System.out.println(pricing.getDiscountPercentage());
  
         // === CALL BILLING API ===
-        String url = "http://localhost:3005/api/billing/ipd/generate-bill";
+        String url = "http://147.93.28.8:3005/api/billing/ipd/generate-bill";
         ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
         System.out.println("Billing API Response: " + response.getBody());
 
         return admission;
     }
-    
     
     @Override
     @Transactional
@@ -492,51 +496,79 @@ public class IpdServiceImpl implements IpdService {
 
         LocalDate admissionDate = admission.getAdmissionDate().toLocalDate();
         LocalDate today = LocalDate.now();
+        long daysAdmitted = Math.max(1, ChronoUnit.DAYS.between(admissionDate, today) + 1);
 
-        // Aggregate current granular charges from DB (already updated in real-time)
+        // === RECALCULATE EVERYTHING FRESH FROM TRACKING TABLES ===
         List<IpdMedication> meds = medicationRepo.findByAdmissionId(admissionId);
         List<IpdServiceRendered> services = serviceRepo.findByAdmissionId(admissionId);
 
-        double medicationCharges = meds.stream()
-                .mapToDouble(m -> m.getQuantity() * m.getPricePerUnit())
-                .sum();
+//        Doctor doctor = doctorRepo.findById(admission.getDoctorId())
+//                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
+
+        // Daily charges
+        double roomCharges = admission.getRoom().getPrice() * daysAdmitted;
+//        double doctorFee = doctor.getConsultationFee() * daysAdmitted;
+        
+     // === DOCTOR VISITS (NEW ACCURATE WAY) ===
+        double doctorFee = doctorVisitService.calculateTotalDoctorFees(admissionId) * daysAdmitted;
+
+        double dailyNursing = pricing.getNursingFee() * daysAdmitted;
+        double dailyFood = pricing.getFoodFee() * daysAdmitted;
+        double dailyDiagnostic = pricing.getDiagnosticFee() * daysAdmitted;
+        double dailyMisc = pricing.getMiscellaneousFee() * daysAdmitted;
+
+        // Extra one-time services
+        double extraNursing = services.stream()
+                .filter(s -> "NURSING".equalsIgnoreCase(s.getServiceType()))
+                .mapToDouble(IpdServiceRendered::getCharge).sum();
+
+        double extraDiagnostic = services.stream()
+                .filter(s -> "DIAGNOSTIC".equalsIgnoreCase(s.getServiceType()))
+                .mapToDouble(IpdServiceRendered::getCharge).sum();
 
         double extraProcedure = services.stream()
                 .filter(s -> "PROCEDURE".equalsIgnoreCase(s.getServiceType()))
                 .mapToDouble(IpdServiceRendered::getCharge).sum();
 
-        double extraMisc = services.stream()
-                .filter(s -> !"PROCEDURE".equalsIgnoreCase(s.getServiceType()))
+        double extraFood = services.stream()
+                .filter(s -> "FOOD".equalsIgnoreCase(s.getServiceType()))
                 .mapToDouble(IpdServiceRendered::getCharge).sum();
 
-        Doctor doctor = doctorRepo.findById(admission.getDoctorId())
-                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
-        double doctorFee = doctor.getConsultationFee();
+        double extraMisc = services.stream()
+                .filter(s -> "MISC".equalsIgnoreCase(s.getServiceType()))
+                .mapToDouble(IpdServiceRendered::getCharge).sum();
 
-        // Build update request
+        double medicationCharges = meds.stream()
+                .mapToDouble(m -> m.getQuantity() * m.getPricePerUnit())
+                .sum();
+
+        // === BUILD FULL UPDATE REQUEST (Same structure as generate) ===
         IpdBillUpdateRequestDTO request = new IpdBillUpdateRequestDTO();
         request.setAdmissionId(admissionId);
         request.setPatientExternalId(admission.getPatientId());
         request.setHospitalExternalId(admission.getHospital().getId());
         request.setAdmissionDate(admissionDate);
         request.setDischargeDate(today);
+
         request.setRoomRatePerDay(admission.getRoom().getPrice());
 
+        // Send TOTAL charges (not per day!)
         request.setNursingChargesPerDay(pricing.getNursingFee());
         request.setFoodChargesPerDay(pricing.getFoodFee());
         request.setDiagnosticChargesPerDay(pricing.getDiagnosticFee());
         request.setMiscChargesPerDay(pricing.getMiscellaneousFee());
 
+        // Send CURRENT accumulated values
         request.setMedicationCharges(medicationCharges);
-        request.setDoctorFee(doctorFee);
+        request.setDoctorFee(doctorFee);                    // Now scales with days!
         request.setProcedureCharges(extraProcedure);
-        request.setExtraServiceCharges(extraMisc);
+        request.setExtraServiceCharges(extraNursing + extraFood + extraDiagnostic + extraMisc);
 
         request.setDiscountPercentage(pricing.getDiscountPercentage());
         request.setGstPercentage(pricing.getGstPercentage());
 
         // Call Billing Module
-        String url = "http://localhost:3005/api/billing/ipd/update-bill";
+        String url = "http://147.93.28.8:3005/api/billing/ipd/update-bill";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<IpdBillUpdateRequestDTO> entity = new HttpEntity<>(request, headers);
@@ -591,7 +623,7 @@ public class IpdServiceImpl implements IpdService {
 //
 //        // ✅ Step 2: Call Billing Service API
 ////        RestTemplate restTemplate = new RestTemplate();
-//        String billingApiUrl = "http://localhost:3005/api/billing/ipd/generate-bill";
+//        String billingApiUrl = "http://147.93.28.8:3005/api/billing/ipd/generate-bill";
 //        ResponseEntity<String> billingResponse =
 //                restTemplate.postForEntity(billingApiUrl, request, String.class);
 //        System.out.println("Billing generated: " + billingResponse.getBody());
@@ -602,7 +634,7 @@ public class IpdServiceImpl implements IpdService {
     //---------------------------------
     @Override
     public String processPayment(IpdPaymentRequestDTO request) {
-        String billingApiUrl = "http://localhost:3005/api/billing/ipd/payment";
+        String billingApiUrl = "http://147.93.28.8:3005/api/billing/ipd/payment";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -626,7 +658,7 @@ public class IpdServiceImpl implements IpdService {
          }
          
          // ✅ Step 1: Verify Payment from Billing Module before discharging
-         String billingApiUrl = "http://localhost:3005/api/billing/ipd/status?admissionId=" + admissionId;
+         String billingApiUrl = "http://147.93.28.8:3005/api/billing/ipd/status?admissionId=" + admissionId;
          
          ResponseEntity<String> response = restTemplate.getForEntity(billingApiUrl, String.class);
          
@@ -908,5 +940,4 @@ public class IpdServiceImpl implements IpdService {
         );
     }
     
-
 }

@@ -28,10 +28,20 @@ public class IpdTrackingServiceImpl implements IpdTrackingService {
                 .visitDate(LocalDateTime.now())
                 .fee(fee)
                 .notes(notes)
+                .visitCount(1)
                 .build();
         return doctorVisitRepo.save(visit);
     }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<IpdDoctorVisit> getDoctorVisits(Long admissionId) {
+        IpdAdmission admission = admissionRepo.findById(admissionId)
+                .orElseThrow(() -> new RuntimeException("Admission not found"));
+        return doctorVisitRepo.findByAdmission(admission);
+    }
 
+    
     @Override
     @Transactional
     public IpdMedication addMedication(Long admissionId, String name, Integer qty, Double pricePerUnit) {
@@ -69,14 +79,6 @@ public class IpdTrackingServiceImpl implements IpdTrackingService {
     }
     
     
-    @Override
-    @Transactional(readOnly = true)
-    public List<IpdDoctorVisit> getDoctorVisits(Long admissionId) {
-        IpdAdmission admission = admissionRepo.findById(admissionId)
-                .orElseThrow(() -> new RuntimeException("Admission not found"));
-        return doctorVisitRepo.findByAdmission(admission);
-    }
-
     @Override
     @Transactional(readOnly = true)
     public List<IpdMedication> getMedications(Long admissionId) {
