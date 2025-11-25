@@ -27,19 +27,17 @@ public class IpdRecommendationResponseDTO {
     private IpdRecommendationStatus status;
     private LocalDateTime createdAt;
 
-    public IpdRecommendationResponseDTO(IpdRecommendation recommendation) {
-    	
-    	Doctor doctor = doctorRepository.getById(recommendation.getDoctorId());
-    	Patient patient = patientRepository.getById(recommendation.getPatientId());
-    	
-        this.recommendationId = recommendation.getId();
-//        this.appointmentId = recommendation.getAppointment().getAppointmentId();
-        this.patientName = patient.getUser().getName();
-        this.doctorName = doctor.getUser().getName();
-        this.reason = recommendation.getReason();
-        this.status = recommendation.getStatus();
-        this.createdAt = recommendation.getCreatedAt();
-    }
+    public IpdRecommendationResponseDTO(IpdRecommendation recommendation,
+            Doctor doctor,
+            Patient patient) {
+
+this.recommendationId = recommendation.getId();
+this.patientName = patient != null ? patient.getUser().getName() : null;
+this.doctorName = doctor != null ? doctor.getUser().getName() : null;
+this.reason = recommendation.getReason();
+this.status = recommendation.getStatus();
+this.createdAt = recommendation.getCreatedAt();
+}
 
     // Getters and Setters
     public Long getRecommendationId() {

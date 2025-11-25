@@ -52,6 +52,7 @@ public class SecurityConfig {
         .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/ipd/recommend").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
@@ -68,6 +69,7 @@ public class SecurityConfig {
                         		"http://localhost:5173",
                         		"http://localhost:4000",
                         		"http://localhost:5174",
+                        		"http://localhost:5175",
                                 "http://localhost",
                                 "http://localhost:*",
                                 "http://127.0.0.1",

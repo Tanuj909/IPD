@@ -1,21 +1,23 @@
 package com.ipd.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
 public class IpdRecommendationCreateDTO {
-    @NotNull(message = "Appointment ID is required")
-    private Long appointmentId;
+
+    @NotNull(message = "Patient ID is required")
+    private Long patientId;
 
     @NotBlank(message = "Reason for recommendation is required")
     private String reason;
 
-    public Long getAppointmentId() {
-        return appointmentId;
+    // Getters & Setters
+    public Long getPatientId() {
+        return patientId;
     }
 
-    public void setAppointmentId(Long appointmentId) {
-        this.appointmentId = appointmentId;
+    public void setPatientId(Long patientId) {
+        this.patientId = patientId;
     }
 
     public String getReason() {

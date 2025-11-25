@@ -13,7 +13,7 @@ import java.util.List;
 @RequestMapping("/api/ipd/service")  // Fixed: was "api/ipd/service"
 public class IpdServiceCaller {
 
-    private static final String BILLING_SERVICE_URL = "http://147.93.28.8:3005/api/ipd/billing";
+    private static final String BILLING_SERVICE_URL = "http://localhost:3005/api/ipd/billing";
 //    private static final String BILLING_SERVICE_URL = "http://147.93.28.8:3005/api/ipd/billing";
 
 

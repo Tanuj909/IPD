@@ -33,12 +33,9 @@ public class IpdRecommendationServiceImpl implements IpdRecommendationService {
     @Autowired
     private IpdRecommendationRepository ipdRecommendationRepository;
 
-//    @Autowired
-//    private AppointmentRepository appointmentRepository;
-
     @Autowired
     private DoctorRepository doctorRepository;
-    
+
     @Autowired
     private UserRepository userRepository;
 
@@ -51,99 +48,114 @@ public class IpdRecommendationServiceImpl implements IpdRecommendationService {
     @Autowired
     private IpdService ipdService;
 
+
     private String getCurrentUsername() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
+
+    // -------------------------------------------------------------
+    // CREATE RECOMMENDATION
+    // -------------------------------------------------------------
     @Override
     public IpdRecommendationResponseDTO createRecommendation(IpdRecommendationCreateDTO dto) {
+
         String email = getCurrentUsername();
-        
+
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
-        
-        Doctor doctor;
-        if (user.getRole()==Role.DOCTOR) {
-			doctor = user.getDoctor();
-		}else {
-			throw new AccessDeniedException("Only Doctor Role Allow");
-		}
 
-//        Appointment appointment = appointmentRepository.findById(dto.getAppointmentId())
-//                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + dto.getAppointmentId()));
+        if (user.getRole() != Role.DOCTOR) {
+            throw new AccessDeniedException("Only Doctor Role is allowed to create recommendations");
+        }
 
-        // Validate appointment is completed and assigned to the doctor
-//        if (appointment.getStatus() != AppointmentStatus.COMPLETED) {
-//            throw new IllegalStateException("IPD recommendations can only be made for completed appointments");
-//        }
-//        if (!appointment.getDoctor().getDoctorId().equals(doctor.getDoctorId())) {
-//            throw new AccessDeniedException("You can only recommend IPD for appointments assigned to you");
-//        }
+        Doctor doctor = user.getDoctor();
 
-//        Patient patient = appointment.getPatient();
-        
-        IpdHospital hospital = hospitalRepository.findById(user.getIpdHospitalId()).orElseThrow(()->new ResourceNotFoundException("Hospital Not Present"));
+        // --- Fetch patient for this recommendation ---
+        Patient patient = patientRepository.findById(dto.getPatientId())
+                .orElseThrow(() -> new ResourceNotFoundException("Patient not found with ID: " + dto.getPatientId()));
 
+        IpdHospital hospital = hospitalRepository.findById(user.getIpdHospitalId())
+                .orElseThrow(() -> new ResourceNotFoundException("Hospital Not Present"));
+
+        // --- Create entity ---
         IpdRecommendation recommendation = new IpdRecommendation();
-//        recommendation.setPatient(patient);
         recommendation.setDoctorId(doctor.getId());
-       
-//        recommendation.setAppointment(appointment);
+        recommendation.setPatientId(patient.getId());
         recommendation.setHospital(hospital);
         recommendation.setReason(dto.getReason());
         recommendation.setStatus(IpdRecommendationStatus.PENDING);
 
         IpdRecommendation saved = ipdRecommendationRepository.save(recommendation);
-        return new IpdRecommendationResponseDTO(saved);
+
+        return new IpdRecommendationResponseDTO(saved, doctor, patient);
     }
 
+
+    // -------------------------------------------------------------
+    // GET RECOMMENDATIONS BY PATIENT
+    // -------------------------------------------------------------
     @Override
     public List<IpdRecommendationResponseDTO> getRecommendationsByPatient(String email) {
+
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Patient not found with email: " + email));
-        
-        Patient patient;
-        
-        if(user.getRole()==Role.PATIENT) {
-        	patient = user.getPatient();
-        }else {
-        	throw new AccessDeniedException("Patient role not present");
+                .orElseThrow(() -> new ResourceNotFoundException("Patient not found"));
+
+        if (user.getRole() != Role.PATIENT) {
+            throw new AccessDeniedException("Only patient can view their recommendations");
         }
+
+        Patient patient = user.getPatient();
+
         return ipdRecommendationRepository.findByPatientId(patient.getId())
                 .stream()
-                .map(IpdRecommendationResponseDTO::new)
+                .map(rec -> {
+                    Doctor doctor = doctorRepository.findById(rec.getDoctorId()).orElse(null);
+                    return new IpdRecommendationResponseDTO(rec, doctor, patient);
+                })
                 .collect(Collectors.toList());
     }
 
+
+    // -------------------------------------------------------------
+    // GET RECOMMENDATIONS BY DOCTOR
+    // -------------------------------------------------------------
     @Override
     public List<IpdRecommendationResponseDTO> getRecommendationsByDoctor(String email) {
-    	
-//        Doctor doctor = doctorRepository.findByEmail(email)
-//                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with email: " + email));
-    	
-    	 User user = userRepository.findByEmail(email)
-                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
-         
-         Doctor doctor;
-         if (user.getRole()==Role.DOCTOR) {
- 			doctor = user.getDoctor();
- 		}else {
- 			throw new AccessDeniedException("Only Doctor Role Allow");
- 		}
-    	
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (user.getRole() != Role.DOCTOR) {
+            throw new AccessDeniedException("Only doctors can view their recommendations");
+        }
+
+        Doctor doctor = user.getDoctor();
+
         return ipdRecommendationRepository.findByDoctorId(doctor.getId())
                 .stream()
-                .map(IpdRecommendationResponseDTO::new)
+                .map(rec -> {
+
+                    Patient patient = patientRepository.findById(rec.getPatientId())
+                            .orElse(null);
+
+                    return new IpdRecommendationResponseDTO(rec, doctor, patient);
+                })
                 .collect(Collectors.toList());
     }
 
+
+    // -------------------------------------------------------------
+    // CONVERT RECOMMENDATION → ADMISSION
+    // -------------------------------------------------------------
     @Override
     public IpdAdmission convertToAdmission(Long recommendationId, Long roomId) {
+
         IpdRecommendation recommendation = ipdRecommendationRepository.findById(recommendationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Recommendation not found with ID: " + recommendationId));
+                .orElseThrow(() -> new ResourceNotFoundException("Recommendation not found"));
 
         if (recommendation.getStatus() != IpdRecommendationStatus.PENDING) {
-            throw new IllegalStateException("Only PENDING recommendations can be converted to admissions");
+            throw new IllegalStateException("Only PENDING recommendations can be converted to admission");
         }
 
         IpdAdmission admission = ipdService.admitPatient(
@@ -158,12 +170,28 @@ public class IpdRecommendationServiceImpl implements IpdRecommendationService {
 
         return admission;
     }
-    
+
+
+    // -------------------------------------------------------------
+    // GET PENDING RECOMMENDATIONS BY HOSPITAL
+    // -------------------------------------------------------------
     @Override
     public List<IpdRecommendationResponseDTO> getPendingRecommendationsByHospital(IpdHospital hospital) {
-        return ipdRecommendationRepository.findByHospitalAndStatus(hospital, IpdRecommendationStatus.PENDING)
+
+        return ipdRecommendationRepository
+                .findByHospitalAndStatus(hospital, IpdRecommendationStatus.PENDING)
                 .stream()
-                .map(IpdRecommendationResponseDTO::new)
+                .map(rec -> {
+
+                    Doctor doctor = doctorRepository.findById(rec.getDoctorId())
+                            .orElse(null);
+
+                    Patient patient = patientRepository.findById(rec.getPatientId())
+                            .orElse(null);
+
+                    return new IpdRecommendationResponseDTO(rec, doctor, patient);
+                })
                 .collect(Collectors.toList());
     }
+
 }

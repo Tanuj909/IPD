@@ -20,6 +20,7 @@ import com.ipd.service.DoctorVisitService;
 import com.ipd.service.IpdService;
 import com.ipd.service.IpdTrackingService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -83,7 +84,8 @@ public class IpdServiceImpl implements IpdService {
     @Autowired
     private DoctorVisitService doctorVisitService;
     
-    private static final String IPD_BASE_URL = "http://147.93.28.8:3005/api/ipd";
+    @Value("${billing.base.url}")   // <-- Inject value from application.properties
+    private String billingBaseUrl;
     
  // ADD AUTOWIRED
     @Autowired
@@ -474,7 +476,7 @@ public class IpdServiceImpl implements IpdService {
         System.out.println(pricing.getDiscountPercentage());
  
         // === CALL BILLING API ===
-        String url = "http://147.93.28.8:3005/api/billing/ipd/generate-bill";
+        String url = billingBaseUrl + "ipd/generate-bill" ;
         ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
         System.out.println("Billing API Response: " + response.getBody());
 
@@ -568,7 +570,7 @@ public class IpdServiceImpl implements IpdService {
         request.setGstPercentage(pricing.getGstPercentage());
 
         // Call Billing Module
-        String url = "http://147.93.28.8:3005/api/billing/ipd/update-bill";
+        String url = billingBaseUrl + "ipd/update-bill";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<IpdBillUpdateRequestDTO> entity = new HttpEntity<>(request, headers);
@@ -633,8 +635,8 @@ public class IpdServiceImpl implements IpdService {
 
     //---------------------------------
     @Override
-    public String processPayment(IpdPaymentRequestDTO request) {
-        String billingApiUrl = "http://147.93.28.8:3005/api/billing/ipd/payment";
+    public String processPayment(IpdPaymentRequestDTO request) {	
+    	String billingApiUrl = billingBaseUrl+ "ipd/payment";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -658,7 +660,8 @@ public class IpdServiceImpl implements IpdService {
          }
          
          // ✅ Step 1: Verify Payment from Billing Module before discharging
-         String billingApiUrl = "http://147.93.28.8:3005/api/billing/ipd/status?admissionId=" + admissionId;
+         
+         String billingApiUrl = billingBaseUrl + "ipd/status?admissionId=" + admissionId;      
          
          ResponseEntity<String> response = restTemplate.getForEntity(billingApiUrl, String.class);
          
