@@ -8,9 +8,12 @@ import org.springframework.stereotype.Service;
 import com.ipd.Exception.ResourceNotFoundException;
 import com.ipd.dto.DoctorDto;
 import com.ipd.dto.IpdAutoDischargeRecordDTO;
+import com.ipd.dto.IpdMedicationResponse;
+import com.ipd.dto.IpdTreatmentResponse;
 import com.ipd.dto.PatientDto;
 import com.ipd.entity.IpdAutoDischargeRecord;
 import com.ipd.entity.IpdDischargeSummary;
+import com.ipd.entity.IpdMedication;
 import com.ipd.entity.IpdTreatmentUpdate;
 import com.ipd.entity.IpdVital;
 import com.ipd.repository.IpdAutoDischargeRecordRepository;
@@ -73,12 +76,57 @@ public class IpdAutoDischargeRecordService {
         dto.setDoctor(doctorDto);
 
         // Decode Treatment JSON
-        try {
-            List<IpdTreatmentUpdate> treatments = new ArrayList<>(record.getTreatmentSummary());
-            dto.setTreatments(treatments);
-        } catch (Exception ex) {
-            throw new RuntimeException("Error parsing treatment JSON", ex);
+        
+
+//        try {
+//            List<IpdTreatmentUpdate> treatments = new ArrayList<>(record.getTreatmentSummary());
+//            dto.setTreatments(treatments);
+//        } catch (Exception ex) {
+//            throw new RuntimeException("Error parsing treatment JSON", ex);
+//        }
+        
+        // ----------------------------------------
+        //          TREATMENT + MEDICATION DTO
+        // ----------------------------------------
+        
+        List<IpdTreatmentResponse> treatment = new ArrayList<>();
+        
+        for(IpdTreatmentUpdate t : record.getTreatmentSummary()) {
+        	
+        	IpdTreatmentResponse tDto = new IpdTreatmentResponse();
+        	tDto.setId(t.getId());
+        	tDto.setDiagnosis(t.getDiagnosis());
+            tDto.setProceduresDone(t.getProceduresDone());
+            tDto.setPrescriptionText(t.getPrescriptionText());
+            tDto.setCreatedAt(t.getCreatedAt());
+            tDto.setUpdatedAt(t.getUpdatedAt());
+        	
+            // ---- Map medications ----
+            List<IpdMedicationResponse> medicationDtos = new ArrayList<>();
+            
+            if(t.getMedications() != null) {
+            	for(IpdMedication m : t.getMedications()) {
+                    IpdMedicationResponse mDto = new IpdMedicationResponse();
+                    mDto.setId(m.getId());
+                    mDto.setMedicineName(m.getMedicineName());
+                    mDto.setDosage(m.getDosage());
+                    mDto.setFrequency(m.getFrequency());
+                    mDto.setDuration(m.getDuration());
+                    mDto.setInstructions(m.getInstructions());
+                    mDto.setQuantity(m.getQuantity());
+                    mDto.setAdministeredDate(m.getAdministeredDate());
+
+                    medicationDtos.add(mDto);
+            	}
+            }
+        	
+            tDto.setMedications(medicationDtos);
+            treatment.add(tDto);
         }
+        
+        dto.setTreatments(treatment);
+        
+        
 
         // Decode Vital JSON
         try {

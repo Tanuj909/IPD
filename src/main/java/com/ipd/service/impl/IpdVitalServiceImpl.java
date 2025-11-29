@@ -52,14 +52,14 @@ public class IpdVitalServiceImpl implements IpdVitalService {
 //        }
 
         //TYPE RESTRICTIONS
-        List<IpdVital> sameTypeVitals =
-                vitalRepo.findByAdmissionIdAndType(admissionId, vital.getType());
+//        List<IpdVital> sameTypeVitals =
+//                vitalRepo.findByAdmissionIdAndType(admissionId, vital.getType());
 
-        if (!sameTypeVitals.isEmpty()) {
-            throw new RuntimeException(
-                    "Vital type " + vital.getType() + " already exists. You can only update this vital."
-            );
-        }
+//        if (!sameTypeVitals.isEmpty()) {
+//            throw new RuntimeException(
+//                    "Vital type " + vital.getType() + " already exists. You can only update this vital."
+//            );
+//        }
 
         // Map admission + hospital
         vital.setAdmission(admission);

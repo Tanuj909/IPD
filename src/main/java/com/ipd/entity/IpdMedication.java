@@ -39,6 +39,7 @@ public class IpdMedication {
     private IpdAdmission admission;
 
     @ManyToOne
+    @JsonIgnore
     private IpdTreatmentUpdate treatmentUpdate;
 
     @ManyToOne

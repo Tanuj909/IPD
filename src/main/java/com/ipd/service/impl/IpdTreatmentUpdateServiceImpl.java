@@ -2,6 +2,7 @@ package com.ipd.service.impl;
 
 import com.ipd.Exception.AccessDeniedException;
 import com.ipd.Exception.ResourceNotFoundException;
+import com.ipd.dto.IpdTreatmentResponse;
 import com.ipd.entity.IpdAdmission;
 import com.ipd.entity.IpdHospital;
 import com.ipd.entity.IpdTreatmentUpdate;
@@ -85,6 +86,34 @@ public class IpdTreatmentUpdateServiceImpl implements IpdTreatmentUpdateService 
     public List<IpdTreatmentUpdate> getAllTreatments(Long admissionId) {
         return repo.findByAdmissionIdOrderByCreatedAtDesc(admissionId);
     }
+    
+    
+    //Helper method to set the response in the DTO 
+//    private IpdTreatmentResponse convertToDto(IpdTreatmentUpdate update) {
+//        IpdTreatmentResponse dto = new IpdTreatmentResponse();
+//
+//        dto.setId(update.getId());
+//        dto.setDiagnosis(update.getDiagnosis());
+//        dto.setTreatmentNotes(update.getTreatmentNotes());
+//        dto.setProceduresDone(update.getProceduresDone());
+//        dto.setPrescriptionText(update.getPrescriptionText());
+//        dto.setUpdatedBy(update.getUpdatedBy());
+//        dto.setCreatedAt(update.getCreatedAt());
+//        dto.setUpdatedAt(update.getUpdatedAt());
+//        dto.setMedications(update.getMedications());
+//
+//        return dto;
+//    }
+//
+//    
+//    @Override
+//    public List<IpdTreatmentResponse> getAllTreatments(Long admissionId) {
+//        List<IpdTreatmentUpdate> updates =
+//                repo.findByAdmissionIdOrderByCreatedAtDesc(admissionId);
+//
+//        return updates.stream().map(this::convertToDto).toList();
+//    }
+
 
     @Override
     public IpdTreatmentUpdate getLatestTreatment(Long admissionId) {

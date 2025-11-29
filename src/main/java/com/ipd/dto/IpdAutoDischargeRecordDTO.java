@@ -30,7 +30,7 @@ public class IpdAutoDischargeRecordDTO {
 	
 	private LocalDateTime dischargedAt;
 
-	private List<IpdTreatmentUpdate> treatments;
+	private List<IpdTreatmentResponse> treatments;
 	
 	private List<IpdVital> vitals;
 
