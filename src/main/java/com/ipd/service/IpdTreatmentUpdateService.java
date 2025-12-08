@@ -15,4 +15,5 @@ public interface IpdTreatmentUpdateService {
     List<IpdTreatmentUpdate> getAllTreatments(Long admissionId);
 
     IpdTreatmentUpdate getLatestTreatment(Long admissionId);
+
 }

@@ -33,6 +33,8 @@ public class IpdTreatmentUpdate {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    private String type; //Emergency or Other
 
     @ManyToOne
     @JsonIgnore

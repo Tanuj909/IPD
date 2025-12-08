@@ -22,4 +22,5 @@ public interface IpdRoomRepository extends JpaRepository<IpdRoom, Long> {
     Optional<IpdRoom> findByRoomNumber(String roomNumber);
 
 	List<IpdRoom> findByHospital(IpdHospital hospital);
+
 }

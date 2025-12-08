@@ -11,6 +11,6 @@ public interface IpdRecommendationService {
     IpdRecommendationResponseDTO createRecommendation(IpdRecommendationCreateDTO dto);
     List<IpdRecommendationResponseDTO> getRecommendationsByPatient(String email);
     List<IpdRecommendationResponseDTO> getRecommendationsByDoctor(String email);
-    IpdAdmission convertToAdmission(Long recommendationId, Long roomId);
+    IpdAdmission convertToAdmission(Long recommendationId, Long roomId, Long bedId);
     List<IpdRecommendationResponseDTO> getPendingRecommendationsByHospital(IpdHospital hospital);
 }

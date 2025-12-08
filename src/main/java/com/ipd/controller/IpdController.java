@@ -2,12 +2,10 @@ package com.ipd.controller;
 
 import com.ipd.entity.IpdHospital;
 import com.ipd.entity.IpdMedication;
-import com.user.entity.Doctor;
 import com.user.entity.Patient;
 import com.user.entity.User;
 import com.ipd.dto.AdmissionChartPoint;
-import com.ipd.dto.DoctorFeesResponseDTO;
-import com.ipd.dto.DoctorVisitDTO;
+import com.ipd.dto.IpdAdmissionUpdateRequest;
 import com.ipd.dto.IpdBillingDetailsResponse;
 import com.ipd.dto.IpdDashboardSummary;
 import com.ipd.dto.IpdPaymentRequestDTO;
@@ -19,18 +17,13 @@ import com.ipd.entity.IpdDoctorVisit;
 import com.ipd.entity.IpdModuleSetting;
 import com.ipd.entity.IpdRoom;
 import com.ipd.entity.IpdServiceRendered;
-import com.user.repository.DoctorRepository;
 import com.user.repository.PatientRepository;
 import com.user.repository.UserRepository;
 import com.ipd.Exception.AccessDeniedException;
 import com.ipd.Exception.ResourceNotFoundException;
-import com.ipd.repository.DoctorVisitRepository;
-import com.ipd.repository.IpdAdmissionRepository;
 import com.ipd.repository.IpdBillingRepository;
 import com.ipd.repository.IpdHospitalRepository;
-import com.ipd.repository.IpdMedicationRepository;
 import com.ipd.repository.IpdModuleSettingRepository;
-import com.ipd.repository.IpdServiceRepository;
 import com.ipd.service.BillingIntegrationService;
 import com.ipd.service.DoctorVisitService;
 import com.ipd.service.IpdRecommendationService;
@@ -41,13 +34,11 @@ import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -64,8 +55,8 @@ public class IpdController {
     @Autowired
     private IpdBillingRepository billingRepo;
     
-    @Autowired
-    private IpdRecommendationService ipdRecommendationService;
+//    @Autowired
+//    private IpdRecommendationService ipdRecommendationService;
     
     @Autowired
     private UserRepository userRepository;
@@ -80,17 +71,8 @@ public class IpdController {
     private BillingIntegrationService billingIntegrationService;
     
     @Autowired
-    private DoctorVisitRepository visitRepo;
-    
-    @Autowired
-    private DoctorRepository doctorRepository;
-    
-    @Autowired
     private DoctorVisitService doctorVisitService;
-    
-    @Autowired private IpdServiceRepository serviceRepo;
-    @Autowired private IpdMedicationRepository medRepo;
-    @Autowired private IpdAdmissionRepository admissionRepo;
+   
     
  // ADD AUTOWIRED
     @Autowired
@@ -103,18 +85,31 @@ public class IpdController {
             @RequestParam Long patientId,
             @RequestParam Long doctorId,
             @RequestParam Long roomId,
-            @RequestParam String reason) {
-        IpdAdmission admission = ipdService.admitPatient(patientId, doctorId, roomId, reason);
+            @RequestParam Long bedId,
+            @RequestParam String reason,
+            @RequestParam(required = false) Double advanceAmount,
+            @RequestParam(defaultValue = "CASH") String advancePaymentMode) {
+        IpdAdmission admission = ipdService.admitPatient(patientId, doctorId, roomId,bedId, reason,advanceAmount, advancePaymentMode);
         return ResponseEntity.ok(admission);
     }
+    
+    @PutMapping("/admission/update/{id}")
+    public ResponseEntity<IpdAdmission> updateAdmission(
+            @PathVariable Long id,
+            @RequestBody IpdAdmissionUpdateRequest request) {
+
+        IpdAdmission updated = ipdService.updateAdmissionFully(id, request);
+        return ResponseEntity.ok(updated);
+    }
+
 
 
     // Genrate Bill patient
-    @PostMapping("/generate-bill/{admissionId}")
-    public ResponseEntity<IpdAdmission> generateBilling(@PathVariable Long admissionId) {
-        IpdAdmission discharged = ipdService.generateBilling(admissionId);
-        return ResponseEntity.ok(discharged);
-    }
+//    @PostMapping("/generate-bill/{admissionId}")
+//    public ResponseEntity<IpdAdmission> generateBilling(@PathVariable Long admissionId) {
+//        IpdAdmission discharged = ipdService.generateBilling(admissionId);
+//        return ResponseEntity.ok(discharged);
+//    }
     
     
     //Update Billing
@@ -262,48 +257,48 @@ public class IpdController {
         return ResponseEntity.ok(admissions);
     }
 
-    // Get available rooms
-    @GetMapping("/rooms/available")
-    public ResponseEntity<List<IpdRoom>> getAvailableRooms() {
-        List<IpdRoom> rooms = ipdService.getAvailableRooms();
-        return ResponseEntity.ok(rooms);
-    }
+//    // Get available rooms
+//    @GetMapping("/rooms/available")
+//    public ResponseEntity<List<IpdRoom>> getAvailableRooms() {
+//        List<IpdRoom> rooms = ipdService.getAvailableRooms();
+//        return ResponseEntity.ok(rooms);
+//    }
     
-    @GetMapping("/rooms/availableid")
-    public ResponseEntity<Long> getAvailableRoomId() {
-        Long roomId = ipdService.findFirstAvailableRoomId();
-        if (roomId == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        }
-        return ResponseEntity.ok(roomId);
-    }
+//    @GetMapping("/rooms/availableid")
+//    public ResponseEntity<Long> getAvailableRoomId() {
+//        Long roomId = ipdService.findFirstAvailableRoomId();
+//        if (roomId == null) {
+//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+//        }
+//        return ResponseEntity.ok(roomId);
+//    }
     
-    @GetMapping("/rooms/{roomNumber}")
-    public ResponseEntity<IpdRoom> getRooms(@PathVariable String roomNumber) {
-        IpdRoom rooms = ipdService.getRoomByRoomNumber(roomNumber);
-        return ResponseEntity.ok(rooms);
-    }
+//    @GetMapping("/rooms/{roomNumber}")
+//    public ResponseEntity<IpdRoom> getRooms(@PathVariable String roomNumber) {
+//        IpdRoom rooms = ipdService.getRoomByRoomNumber(roomNumber);
+//        return ResponseEntity.ok(rooms);
+//    }
 
     // Create a new room
-    @PostMapping("/rooms")
-    public ResponseEntity<IpdRoom> createRoom(@RequestBody IpdRoom room) {
-        IpdRoom savedRoom = ipdService.createRoom(room);
-        return ResponseEntity.ok(savedRoom);
-    }
+//    @PostMapping("/rooms")
+//    public ResponseEntity<IpdRoom> createRoom(@RequestBody IpdRoom room) {
+//        IpdRoom savedRoom = ipdService.createRoom(room);
+//        return ResponseEntity.ok(savedRoom);
+//    }
 
     // Update a room
-    @PutMapping("/rooms/{roomId}")
-    public ResponseEntity<IpdRoom> updateRoom(@PathVariable Long roomId, @RequestBody IpdRoom updatedRoom) {
-        IpdRoom room = ipdService.updateRoom(roomId, updatedRoom);
-        return ResponseEntity.ok(room);
-    }
+//    @PutMapping("/rooms/{roomId}")
+//    public ResponseEntity<IpdRoom> updateRoom(@PathVariable Long roomId, @RequestBody IpdRoom updatedRoom) {
+//        IpdRoom room = ipdService.updateRoom(roomId, updatedRoom);
+//        return ResponseEntity.ok(room);
+//    }
 
     // Delete a room
-    @DeleteMapping("/rooms/{roomId}")
-    public ResponseEntity<Void> deleteRoom(@PathVariable Long roomId) {
-        ipdService.deleteRoom(roomId);
-        return ResponseEntity.noContent().build();
-    }
+//    @DeleteMapping("/rooms/{roomId}")
+//    public ResponseEntity<Void> deleteRoom(@PathVariable Long roomId) {
+//        ipdService.deleteRoom(roomId);
+//        return ResponseEntity.noContent().build();
+//    }
     
     @GetMapping("/room/{roomId}")
     public ResponseEntity<IpdRoom> getRoomById(@PathVariable Long roomId) {
@@ -375,45 +370,46 @@ public class IpdController {
   
 //New End Points for IPD Recommendations
   
-  @PostMapping("/recommend")
-  @PreAuthorize("hasRole('DOCTOR')")
-  public ResponseEntity<IpdRecommendationResponseDTO> createRecommendation(@Valid @RequestBody IpdRecommendationCreateDTO dto){
-	  return ResponseEntity.ok(ipdRecommendationService.createRecommendation(dto));
-  }
-  
-  @GetMapping("/recommend/self")
-  @PreAuthorize("hasRole('PATIENT')")
-  public ResponseEntity<List<IpdRecommendationResponseDTO>> getPatientRecommendations() {
-      String email = SecurityContextHolder.getContext().getAuthentication().getName();
-      return ResponseEntity.ok(ipdRecommendationService.getRecommendationsByPatient(email));
-  }
+//  @PostMapping("/recommend")
+//  @PreAuthorize("hasRole('DOCTOR')")
+//  public ResponseEntity<IpdRecommendationResponseDTO> createRecommendation(@Valid @RequestBody IpdRecommendationCreateDTO dto){
+//	  return ResponseEntity.ok(ipdRecommendationService.createRecommendation(dto));
+//  }
+//  
+//  @GetMapping("/recommend/self")
+//  @PreAuthorize("hasRole('PATIENT')")
+//  public ResponseEntity<List<IpdRecommendationResponseDTO>> getPatientRecommendations() {
+//      String email = SecurityContextHolder.getContext().getAuthentication().getName();
+//      return ResponseEntity.ok(ipdRecommendationService.getRecommendationsByPatient(email));
+//  }
 
-  @GetMapping("/recommend/doctor/self")
-  @PreAuthorize("hasRole('DOCTOR')")
-  public ResponseEntity<List<IpdRecommendationResponseDTO>> getDoctorRecommendations() {
-      String email = SecurityContextHolder.getContext().getAuthentication().getName();
-      return ResponseEntity.ok(ipdRecommendationService.getRecommendationsByDoctor(email));
-  }
-
-  @PostMapping("/recommend/{recommendationId}/admit")
-  @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
-  public ResponseEntity<IpdAdmission> convertRecommendationToAdmission(
-          @PathVariable Long recommendationId,
-          @RequestParam Long roomId
-  ) {
-      return ResponseEntity.ok(ipdRecommendationService.convertToAdmission(recommendationId, roomId));
-  }
+//  @GetMapping("/recommend/doctor/self")
+//  @PreAuthorize("hasRole('DOCTOR')")
+//  public ResponseEntity<List<IpdRecommendationResponseDTO>> getDoctorRecommendations() {
+//      String email = SecurityContextHolder.getContext().getAuthentication().getName();
+//      return ResponseEntity.ok(ipdRecommendationService.getRecommendationsByDoctor(email));
+//  }
+//
+//  @PostMapping("/recommend/{recommendationId}/admit")
+//  @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
+//  public ResponseEntity<IpdAdmission> convertRecommendationToAdmission(
+//          @PathVariable Long recommendationId,
+//          @RequestParam Long roomId,
+//          @RequestParam Long bedId    
+//  ) {
+//      return ResponseEntity.ok(ipdRecommendationService.convertToAdmission(recommendationId, roomId, bedId));
+//  }
   
-  @GetMapping("/recommend/pending")
-  @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
-  public ResponseEntity<List<IpdRecommendationResponseDTO>> getPendingRecommendations() {
-      User currentUser = userRepository.findByEmail(SecurityContextHolder.getContext().getAuthentication().getName())
-              .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-      
-      IpdHospital hospital = hospitalRepository.findById(currentUser.getIpdHospitalId()).orElseThrow(()->new AccessDeniedException("User is not mapped to any hospital"));
-      
-      return ResponseEntity.ok(ipdRecommendationService.getPendingRecommendationsByHospital(hospital));
-  }
+//  @GetMapping("/recommend/pending")
+//  @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
+//  public ResponseEntity<List<IpdRecommendationResponseDTO>> getPendingRecommendations() {
+//      User currentUser = userRepository.findByEmail(SecurityContextHolder.getContext().getAuthentication().getName())
+//              .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+//      
+//      IpdHospital hospital = hospitalRepository.findById(currentUser.getIpdHospitalId()).orElseThrow(()->new AccessDeniedException("User is not mapped to any hospital"));
+//      
+//      return ResponseEntity.ok(ipdRecommendationService.getPendingRecommendationsByHospital(hospital));
+//  }
   
 
   

@@ -33,16 +33,18 @@ public class IpdAdmission {
     @Column(columnDefinition = "BOOLEAN DEFAULT FALSE")
     private boolean isOutcomeCreated;
 
-    
     @Column(name="patient_id")
     private Long patientId;
     
     @Column(name="doctor_id")
     private Long doctorId;
 
+//    @ManyToOne
+////    @JsonIgnore
+//    private IpdRoom room;
+    
     @ManyToOne
-//    @JsonIgnore
-    private IpdRoom room;
+    private IpdBed bed;
 
     @ManyToOne
     @JsonIgnore

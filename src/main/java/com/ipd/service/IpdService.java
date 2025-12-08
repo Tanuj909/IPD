@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.ipd.dto.AdmissionChartPoint;
+import com.ipd.dto.IpdAdmissionUpdateRequest;
 import com.ipd.dto.IpdDashboardSummary;
 import com.ipd.dto.IpdPaymentRequestDTO;
 import com.ipd.entity.IpdAdmission;
@@ -12,9 +13,10 @@ import com.ipd.entity.IpdRoom;
 
 public interface IpdService {
 
-    IpdAdmission admitPatient(Long patientId, Long doctorId, Long roomId, String reason);
+    IpdAdmission admitPatient(Long patientId, Long doctorId, Long ipdBedId, Long roomId, String reason,Double advanceAmount,                    // ← Optional
+            String advancePaymentMode);
 
-    IpdAdmission generateBilling(Long admissionId);
+    IpdAdmission generateBilling(Long admissionId,Double advanceAmount,String advancePaymentMode);
     
     void regenerateBill(Long admissionId);
 //    String generateBill(Long admissionId);
@@ -51,7 +53,7 @@ public interface IpdService {
 
 	boolean isIpdEnabledForCurrentHospital();
 	
-	IpdAdmission admitFromRecommendation(Long recommendationId, Long roomId, String reason);
+//	IpdAdmission admitFromRecommendation(Long recommendationId, Long roomId,Long bedId, String reason);
 	
 	String processPayment(IpdPaymentRequestDTO request);
 
@@ -59,12 +61,7 @@ public interface IpdService {
 
 	List<IpdAdmission> getAllDischargeAdmissionsForHospital();
 
-//	DoctorVisit addDoctorVisit(Long admissionId, Long doctorId);
-
-	
-	
-	
-//	Optional<IpdAdmission> findByPatientIdAndIsDischargedFalse(Long patientId);
+	IpdAdmission updateAdmissionFully(Long id, IpdAdmissionUpdateRequest request);
 
     
 }

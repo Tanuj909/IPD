@@ -9,6 +9,7 @@ import com.user.repository.DoctorRepository;
 import com.user.repository.PatientRepository;
 import com.user.repository.UserRepository;
 import com.ipd.dto.AdmissionChartPoint;
+import com.ipd.dto.IpdAdmissionUpdateRequest;
 import com.ipd.dto.IpdBillRequestDTO;
 import com.ipd.dto.IpdBillUpdateRequestDTO;
 import com.ipd.dto.IpdDashboardSummary;
@@ -61,9 +62,6 @@ public class IpdServiceImpl implements IpdService {
 
     @Autowired
     private UserRepository userRepository;
-
-    @Autowired
-    private IpdModuleSettingRepository ipdModuleSettingRepo;
     
     @Autowired
     private IpdRecommendationRepository ipdRecommendationRepository;
@@ -83,6 +81,9 @@ public class IpdServiceImpl implements IpdService {
     
     @Autowired
     private DoctorVisitService doctorVisitService;
+    
+    @Autowired
+    private IpdBedRepository bedRepository;
     
     @Value("${billing.base.url}")   // <-- Inject value from application.properties
     private String billingBaseUrl;
@@ -139,29 +140,104 @@ public class IpdServiceImpl implements IpdService {
 
     
     
+//    @Transactional
+//    @Override
+//    public IpdAdmission admitPatient(Long patientId, Long doctorId, Long roomId, String reason) {
+//        checkIpdModuleAccess();
+//        ipdAdmissionRepo.findByPatientIdAndIsDischargedFalse(patientId).ifPresent(a -> {
+//            throw new IllegalStateException("Patient is already admitted and not discharged.");
+//        });
+//
+//        Patient patient = patientRepo.findById(patientId).orElseThrow(()-> new ResourceNotFoundException("Patient not found"));
+//        Doctor doctor = doctorRepo.findById(doctorId).orElseThrow(()-> new ResourceNotFoundException("Doctor not found"));
+//        IpdRoom room = ipdRoomRepo.findById(roomId).orElseThrow(()-> new ResourceNotFoundException("Room not found"));
+//
+//
+//        if (room.getOccupiedBeds() >= room.getTotalBeds())
+//            throw new IllegalStateException("No beds available in the selected room");
+//
+//        room.setOccupiedBeds(room.getOccupiedBeds() + 1);
+//        ipdRoomRepo.save(room);
+//
+//        IpdAdmission admission = new IpdAdmission();
+//        admission.setPatientId(patient.getId());
+//        admission.setDoctorId(doctor.getId());
+//        admission.setRoom(room);
+//        admission.setHospital(room.getHospital());
+//        admission.setAdmissionDate(LocalDateTime.now());
+//        admission.setDischarged(false);
+//        admission.setReasonForAdmission(reason);
+//        admission.setCreatedAt(LocalDateTime.now());
+//        admission.setCreatedBy(getCurrentUser().getId());
+//
+//        IpdAdmission savedAdmission = ipdAdmissionRepo.save(admission);
+//
+//        // Calculate billing based on 1 day charge initially
+//        double dailyRoomRate = room.getPrice();
+//        double doctorFee = doctor.getConsultationFee();
+//
+//        IpdBilling billing = new IpdBilling();
+//        billing.setAdmission(savedAdmission);
+//        billing.setRoomCharges(dailyRoomRate); // 1st day room charge
+//        billing.setDoctorFee(doctorFee);       // initial consultation fee
+//        billing.setMiscellaneous(0);
+//        billing.setDiscount(0);
+//        billing.setDoctorVisitCount(1);
+//        billing.setTotalAmount(dailyRoomRate + doctorFee);
+//        billing.setFinalAmount(dailyRoomRate + doctorFee);
+//        billing.setPaid(false);
+//        billing.setGeneratedAt(LocalDateTime.now());
+//
+//        billingRepo.save(billing);
+//        savedAdmission.setBilling(billing);
+//
+//        return ipdAdmissionRepo.save(savedAdmission);
+//    }
+    
     @Transactional
     @Override
-    public IpdAdmission admitPatient(Long patientId, Long doctorId, Long roomId, String reason) {
+    public IpdAdmission admitPatient(Long patientId, Long doctorId, Long roomId,Long ipdBedId, String reason
+    		,Double advanceAmount,                    // ← Optional
+            String advancePaymentMode) {
+
         checkIpdModuleAccess();
+
         ipdAdmissionRepo.findByPatientIdAndIsDischargedFalse(patientId).ifPresent(a -> {
             throw new IllegalStateException("Patient is already admitted and not discharged.");
         });
 
-        Patient patient = patientRepo.findById(patientId).orElseThrow(()-> new ResourceNotFoundException("Patient not found"));
-        Doctor doctor = doctorRepo.findById(doctorId).orElseThrow(()-> new ResourceNotFoundException("Doctor not found"));
-        IpdRoom room = ipdRoomRepo.findById(roomId).orElseThrow(()-> new ResourceNotFoundException("Room not found"));
+        Patient patient = patientRepo.findById(patientId)
+                .orElseThrow(() -> new ResourceNotFoundException("Patient not found"));
+        Doctor doctor = doctorRepo.findById(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
+        IpdRoom room = ipdRoomRepo.findById(roomId)
+                .orElseThrow(() -> new ResourceNotFoundException("Room not found"));
 
+        // -------------------------------------------------------
+        // ⭐ FIND FIRST FREE BED IN ROOM
+        // -------------------------------------------------------
+         room.getBeds().stream()
+                .filter(b -> !b.isOccupied())
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No beds available in this room"));
 
-        if (room.getOccupiedBeds() >= room.getTotalBeds())
-            throw new IllegalStateException("No beds available in the selected room");
+         IpdBed ipdBed = bedRepository.findById(ipdBedId).orElseThrow(()->new ResourceNotFoundException("Bed Not Available"));
+        // Mark that bed as occupied
+         ipdBed.setOccupied(true);
 
-        room.setOccupiedBeds(room.getOccupiedBeds() + 1);
+        // Update occupied count
+        int occupiedCount = (int) room.getBeds().stream().filter(IpdBed::isOccupied).count();
+        room.setOccupiedBeds(occupiedCount);
         ipdRoomRepo.save(room);
 
+        // -------------------------------------------------------
+        // ⭐ Create Admission
+        // -------------------------------------------------------
         IpdAdmission admission = new IpdAdmission();
         admission.setPatientId(patient.getId());
         admission.setDoctorId(doctor.getId());
-        admission.setRoom(room);
+//        admission.setRoom(room);
+        admission.setBed(ipdBed);  // <-- NEW: Assign bed
         admission.setHospital(room.getHospital());
         admission.setAdmissionDate(LocalDateTime.now());
         admission.setDischarged(false);
@@ -170,29 +246,90 @@ public class IpdServiceImpl implements IpdService {
         admission.setCreatedBy(getCurrentUser().getId());
 
         IpdAdmission savedAdmission = ipdAdmissionRepo.save(admission);
+        
+        this.generateBilling(savedAdmission.getId(), advanceAmount, advancePaymentMode);
 
-        // Calculate billing based on 1 day charge initially
-        double dailyRoomRate = room.getPrice();
-        double doctorFee = doctor.getConsultationFee();
-
-        IpdBilling billing = new IpdBilling();
-        billing.setAdmission(savedAdmission);
-        billing.setRoomCharges(dailyRoomRate); // 1st day room charge
-        billing.setDoctorFee(doctorFee);       // initial consultation fee
-        billing.setMiscellaneous(0);
-        billing.setDiscount(0);
-        billing.setDoctorVisitCount(1);
-        billing.setTotalAmount(dailyRoomRate + doctorFee);
-        billing.setFinalAmount(dailyRoomRate + doctorFee);
-        billing.setPaid(false);
-        billing.setGeneratedAt(LocalDateTime.now());
-
-        billingRepo.save(billing);
-        savedAdmission.setBilling(billing);
 
         return ipdAdmissionRepo.save(savedAdmission);
     }
+
     
+    @Transactional
+    @Override
+    public IpdAdmission updateAdmissionFully(Long id, IpdAdmissionUpdateRequest request) {
+
+        checkIpdModuleAccess();
+
+        IpdAdmission admission = ipdAdmissionRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Admission not found"));
+
+        boolean updated = false;
+
+        // -------------------------
+        // ⭐ Update Doctor
+        // -------------------------
+        if (request.getDoctorId() != null) {
+            Doctor doctor = doctorRepo.findById(request.getDoctorId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
+            admission.setDoctorId(doctor.getId());
+            updated = true;
+        }
+
+        // -------------------------
+        // ⭐ Update Room
+        // -------------------------
+        if (request.getRoomId() != null) {
+
+            Long newRoomId = request.getRoomId();
+            Long oldRoomId = admission.getBed().getRoom().getId();
+
+            if (!newRoomId.equals(oldRoomId)) {
+
+                IpdRoom oldRoom = admission.getBed().getRoom();
+                IpdRoom newRoom = ipdRoomRepo.findById(newRoomId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Room not found"));
+
+                // Free old bed
+                IpdBed oldBed = admission.getBed();
+                oldBed.setOccupied(false);
+
+                // Find new free bed
+                IpdBed freeBed = newRoom.getBeds().stream()
+                        .filter(b -> !b.isOccupied())
+                        .findFirst()
+                        .orElseThrow(() ->
+                                new IllegalStateException("No empty bed available in new room"));
+
+                freeBed.setOccupied(true);
+
+                // Update room occupied counts
+                oldRoom.setOccupiedBeds((int) oldRoom.getBeds().stream().filter(IpdBed::isOccupied).count());
+                newRoom.setOccupiedBeds((int) newRoom.getBeds().stream().filter(IpdBed::isOccupied).count());
+
+                ipdRoomRepo.save(oldRoom);
+                ipdRoomRepo.save(newRoom);
+
+//                admission.setRoom(newRoom);
+                admission.setBed(freeBed);
+                updated = true;
+            }
+        }
+
+        // -------------------------
+        // ⭐ Update Reason
+        // -------------------------
+        if (request.getReasonForAdmission() != null) {
+            admission.setReasonForAdmission(request.getReasonForAdmission());
+            updated = true;
+        }
+
+        if (updated) {
+            admission.setUpdatedAt(LocalDateTime.now());
+        }
+
+        return ipdAdmissionRepo.save(admission);
+    }
+
     
 
     @Override
@@ -205,40 +342,6 @@ public class IpdServiceImpl implements IpdService {
         }
         return ipdAdmissionRepo.findByHospitalId(currentUser.getIpdHospitalId());
     }
-
-//    @Transactional
-//    @Override
-//    public IpdAdmission dischargePatient(Long admissionId) {
-//        checkIpdModuleAccess();
-//
-//        IpdAdmission admission = ipdAdmissionRepo.findById(admissionId)
-//                .orElseThrow(() -> new ResourceNotFoundException("Admission not found with id: " + admissionId));
-//
-//        checkAccess(admission);
-//
-//        if (admission.isDischarged()) {
-//            throw new IllegalStateException("Patient is already discharged");
-//        }
-//
-//        IpdBilling billing = billingRepo.findByAdmissionId(admissionId)
-//                .orElseThrow(() -> new ResourceNotFoundException("Billing not found for admission"));
-//
-//        if (!billing.isPaid()) {
-//            double pendingAmount = billing.getFinalAmount();
-//            throw new IllegalStateException("Cannot discharge. Amount is pending: ₹" + pendingAmount);
-//        }
-//
-//        admission.setDischarged(true);
-//        admission.setDischargeDate(LocalDateTime.now());
-//
-//        IpdRoom room = admission.getRoom();
-//        room.setOccupiedBeds(room.getOccupiedBeds() - 1);
-//        ipdRoomRepo.save(room);
-//
-//        return ipdAdmissionRepo.save(admission);
-//    }
-    
-    
 
     @PostMapping("/visit/{admissionId}")
     @PreAuthorize("hasRole('DOCTOR')")
@@ -271,110 +374,10 @@ public class IpdServiceImpl implements IpdService {
     }
     
     
-//    @Override
-//    @Transactional
-//    public IpdAdmission generateBilling(Long admissionId) {
-//        checkIpdModuleAccess();
-//
-//        IpdAdmission admission = ipdAdmissionRepo.findById(admissionId)
-//                .orElseThrow(() -> new ResourceNotFoundException("Admission not found"));
-//
-//        checkAccess(admission);
-//        if (admission.isDischarged()) {
-//            throw new IllegalStateException("Patient is already discharged");
-//        }
-//
-//        IpdHospitalPricing pricing = pricingRepo.findByHospital_Id(admission.getHospital().getId())
-//                .orElseThrow(() -> new ResourceNotFoundException("Pricing not set"));
-//
-//        // === AGGREGATE FROM TRACKING TABLES ===
-//        List<IpdDoctorVisit> visits = doctorVisitRepo.findByAdmissionId(admissionId);
-//        List<IpdMedication> meds = medicationRepo.findByAdmissionId(admissionId);
-//        List<IpdServiceRendered> services = serviceRepo.findByAdmissionId(admissionId);
-//        
-//
-//        long daysAdmitted = Math.max(1, ChronoUnit.DAYS.between(
-//                admission.getAdmissionDate().toLocalDate(), LocalDate.now()) + 1);
-//
-//        // === ROOM CHARGES ===
-//        double roomCharges = admission.getRoom().getPrice() * daysAdmitted;
-//
-//        // === DOCTOR VISITS ===
-//        double doctorFees = visits.stream().mapToDouble(IpdDoctorVisit::getFee).sum();
-//
-//        // === MEDICATIONS (from tracking) ===
-//        double medicationCharges = meds.stream()
-//                .mapToDouble(m -> m.getQuantity() * m.getPricePerUnit())
-//                .sum();
-//
-//        // === DAILY FIXED FEES (from IpdHospitalPricing) ===
-//        double dailyNursing = pricing.getNursingFee() * daysAdmitted;
-//        double dailyFood = pricing.getFoodFee() * daysAdmitted;
-//        double dailyDiagnostic = pricing.getDiagnosticFee() * daysAdmitted;
-//        double dailyMisc = pricing.getMiscellaneousFee() * daysAdmitted;
-//
-//        // === ADDITIONAL ONE-TIME SERVICES (from IpdServiceRendered) ===
-//        double extraNursing = services.stream()
-//                .filter(s -> "NURSING".equalsIgnoreCase(s.getServiceType()))
-//                .mapToDouble(IpdServiceRendered::getCharge)
-//                .sum();
-//
-//        double extraDiagnostic = services.stream()
-//                .filter(s -> "DIAGNOSTIC".equalsIgnoreCase(s.getServiceType()))
-//                .mapToDouble(IpdServiceRendered::getCharge)
-//                .sum();
-//
-//        double extraProcedure = services.stream()
-//                .filter(s -> "PROCEDURE".equalsIgnoreCase(s.getServiceType()))
-//                .mapToDouble(IpdServiceRendered::getCharge)
-//                .sum();
-//
-//        double extraFood = services.stream()
-//                .filter(s -> "FOOD".equalsIgnoreCase(s.getServiceType()))
-//                .mapToDouble(IpdServiceRendered::getCharge)
-//                .sum();
-//
-//        double extraMisc = services.stream()
-//                .filter(s -> "MISC".equalsIgnoreCase(s.getServiceType()))
-//                .mapToDouble(IpdServiceRendered::getCharge)
-//                .sum();
-//
-//        // === FINAL CHARGES ===
-//        double nursingCharges = dailyNursing + extraNursing;
-//        double foodCharges = dailyFood + extraFood;
-//        double diagnosticCharges = dailyDiagnostic + extraDiagnostic;
-//        double miscellaneousCharges = dailyMisc + extraMisc;
-//        double procedureCharges = extraProcedure; // Usually not daily
-//
-//        // === BUILD DTO ===
-//        IpdBillRequestDTO request = new IpdBillRequestDTO();
-//        request.setPatientExternalId(admission.getPatientId());
-//        request.setHospitalExternalId(admission.getHospital().getId());
-//        request.setAdmissionId(admissionId);
-//        request.setAdmissionDate(admission.getAdmissionDate().toLocalDate());
-//        request.setDischargeDate(LocalDate.now());
-//        request.setRoomRatePerDay(admission.getRoom().getPrice());
-//        request.setMedicationCharges(medicationCharges);
-//        request.setNursingCharges(nursingCharges);
-//        request.setDoctorFee(doctorFees);
-//        request.setDiagnosticCharges(diagnosticCharges);
-//        request.setProcedureCharges(procedureCharges);
-//        request.setFoodCharges(foodCharges);
-//        request.setMiscellaneousCharges(miscellaneousCharges);
-//        request.setDiscountPercentage(0.0);
-//        request.setGstPercentage(18.0);
-//
-//        // === CALL BILLING API ===
-//        String url = "http://localhost/api/billing/ipd/generate-bill";
-//        ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
-//        System.out.println("Billing API Response: " + response.getBody());
-//
-//        return admission;
-//    }
     
     @Override
     @Transactional
-    public IpdAdmission generateBilling(Long admissionId) {
+    public IpdAdmission generateBilling(Long admissionId,Double advanceAmount, String advancePaymentMode) {
         checkIpdModuleAccess();
 
         IpdAdmission admission = ipdAdmissionRepo.findById(admissionId)
@@ -397,7 +400,9 @@ public class IpdServiceImpl implements IpdService {
                 admission.getAdmissionDate().toLocalDate(), LocalDate.now()) + 1);
 
         // === ROOM CHARGES ===
-        double roomCharges = admission.getRoom().getPrice() * daysAdmitted;
+      double roomCharges = admission.getBed().getRoom().getPrice() * daysAdmitted;
+//        double roomCharges = admission.getBed().getBedNumber().
+
 
         // === DOCTOR VISITS ===
 //        double doctorFees = visits.stream().mapToDouble(IpdDoctorVisit::getFee).sum();
@@ -461,7 +466,7 @@ public class IpdServiceImpl implements IpdService {
         request.setAdmissionId(admissionId);
         request.setAdmissionDate(admission.getAdmissionDate().toLocalDate());
         request.setDischargeDate(LocalDate.now());
-        request.setRoomRatePerDay(admission.getRoom().getPrice());
+        request.setRoomRatePerDay(admission.getBed().getRoom().getPrice());
         request.setMedicationCharges(medicationCharges);
         request.setNursingCharges(nursingCharges);
 //        request.setDoctorFee(doctorFees);
@@ -472,6 +477,8 @@ public class IpdServiceImpl implements IpdService {
         request.setMiscellaneousCharges(miscellaneousCharges);
         request.setDiscountPercentage(pricing.getDiscountPercentage());
         request.setGstPercentage(pricing.getGstPercentage());
+        request.setAdvanceAmount(advanceAmount);
+        request.setAdvancePaymentMode(advancePaymentMode);
         
         System.out.println(pricing.getDiscountPercentage());
  
@@ -508,7 +515,7 @@ public class IpdServiceImpl implements IpdService {
 //                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
 
         // Daily charges
-        double roomCharges = admission.getRoom().getPrice() * daysAdmitted;
+        double roomCharges = admission.getBed().getRoom().getPrice() * daysAdmitted;
 //        double doctorFee = doctor.getConsultationFee() * daysAdmitted;
         
      // === DOCTOR VISITS (NEW ACCURATE WAY) ===
@@ -552,7 +559,7 @@ public class IpdServiceImpl implements IpdService {
         request.setAdmissionDate(admissionDate);
         request.setDischargeDate(today);
 
-        request.setRoomRatePerDay(admission.getRoom().getPrice());
+        request.setRoomRatePerDay(admission.getBed().getRoom().getPrice());
 
         // Send TOTAL charges (not per day!)
         request.setNursingChargesPerDay(pricing.getNursingFee());
@@ -647,39 +654,86 @@ public class IpdServiceImpl implements IpdService {
     }
     
     //This method will call the billing API to check if the payment is done or not!
+//    @Transactional
+//    @Override
+//    public void dischargeAfterPayment(Long admissionId) {
+//    	 checkIpdModuleAccess();
+//         IpdAdmission admission = ipdAdmissionRepo.findById(admissionId)
+//                 .orElseThrow(() -> new ResourceNotFoundException("Admission not found with id: " + admissionId));
+//         
+//         checkAccess(admission);
+//         if (admission.isDischarged()) {
+//             throw new IllegalStateException("Patient is already discharged");
+//         }
+//         
+//         // ✅ Step 1: Verify Payment from Billing Module before discharging
+//         
+//         String billingApiUrl = billingBaseUrl + "ipd/status?admissionId=" + admissionId;      
+//         
+//         ResponseEntity<String> response = restTemplate.getForEntity(billingApiUrl, String.class);
+//         
+//         if (!response.getBody().equalsIgnoreCase("PAID")) {
+//             throw new IllegalStateException("Cannot discharge. Payment still pending!");
+//         }
+//
+//         // ✅ Step 2: Mark patient as discharged
+//         admission.setDischarged(true);
+//         admission.setDischargeDate(LocalDateTime.now());
+//         
+//         // ✅ Step 3: Update Room availability
+//         IpdRoom room = admission.getRoom();
+//         room.setOccupiedBeds(room.getOccupiedBeds() - 1);
+//         ipdRoomRepo.save(room);
+//         
+//         ipdAdmissionRepo.save(admission);
+//    }
+    
     @Transactional
     @Override
     public void dischargeAfterPayment(Long admissionId) {
-    	 checkIpdModuleAccess();
-         IpdAdmission admission = ipdAdmissionRepo.findById(admissionId)
-                 .orElseThrow(() -> new ResourceNotFoundException("Admission not found with id: " + admissionId));
-         
-         checkAccess(admission);
-         if (admission.isDischarged()) {
-             throw new IllegalStateException("Patient is already discharged");
-         }
-         
-         // ✅ Step 1: Verify Payment from Billing Module before discharging
-         
-         String billingApiUrl = billingBaseUrl + "ipd/status?admissionId=" + admissionId;      
-         
-         ResponseEntity<String> response = restTemplate.getForEntity(billingApiUrl, String.class);
-         
-         if (!response.getBody().equalsIgnoreCase("PAID")) {
-             throw new IllegalStateException("Cannot discharge. Payment still pending!");
-         }
 
-         // ✅ Step 2: Mark patient as discharged
-         admission.setDischarged(true);
-         admission.setDischargeDate(LocalDateTime.now());
-         
-         // ✅ Step 3: Update Room availability
-         IpdRoom room = admission.getRoom();
-         room.setOccupiedBeds(room.getOccupiedBeds() - 1);
-         ipdRoomRepo.save(room);
-         
-         ipdAdmissionRepo.save(admission);
+        checkIpdModuleAccess();
+
+        IpdAdmission admission = ipdAdmissionRepo.findById(admissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Admission not found"));
+
+        checkAccess(admission);
+
+        if (admission.isDischarged()) {
+            throw new IllegalStateException("Patient is already discharged");
+        }
+
+        // -------------------------
+        // ⭐ Check Billing Status
+        // -------------------------
+        String url = billingBaseUrl + "ipd/status?admissionId=" + admissionId;
+
+        ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+
+        if (!response.getBody().equalsIgnoreCase("PAID")) {
+            throw new IllegalStateException("Cannot discharge. Payment still pending!");
+        }
+
+        // -------------------------
+        // ⭐ Mark patient as discharged
+        // -------------------------
+        admission.setDischarged(true);
+        admission.setDischargeDate(LocalDateTime.now());
+
+        // -------------------------
+        // ⭐ Free Bed
+        // -------------------------
+        IpdRoom room = admission.getBed().getRoom();
+        
+        IpdBed bed = admission.getBed();
+        bed.setOccupied(false);
+
+        room.setOccupiedBeds((int) room.getBeds().stream().filter(IpdBed::isOccupied).count());
+        ipdRoomRepo.save(room);
+
+        ipdAdmissionRepo.save(admission);
     }
+
     
     @Override
     public List<IpdAdmission> getAllDischargeAdmissionsForHospital() {
@@ -927,20 +981,21 @@ public class IpdServiceImpl implements IpdService {
 //                .orElse(false);
     }
     
-    @Override
-    @Transactional
-    public IpdAdmission admitFromRecommendation(Long recommendationId, Long roomId, String reason) {
-        checkIpdModuleAccess();
-        return admitPatient(
-                ipdRecommendationRepository.findById(recommendationId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Recommendation not found with ID: " + recommendationId))
-                        .getPatientId(),
-                ipdRecommendationRepository.findById(recommendationId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Recommendation not found with ID: " + recommendationId))
-                        .getDoctorId(),
-                roomId,
-                reason
-        );
-    }
-    
+//    @Override
+//    @Transactional
+//    public IpdAdmission admitFromRecommendation(Long recommendationId, Long roomId, Long bedId, String reason) {
+//        checkIpdModuleAccess();
+//        return admitPatient(
+//                ipdRecommendationRepository.findById(recommendationId)
+//                        .orElseThrow(() -> new ResourceNotFoundException("Recommendation not found with ID: " + recommendationId))
+//                        .getPatientId(),
+//                ipdRecommendationRepository.findById(recommendationId)
+//                        .orElseThrow(() -> new ResourceNotFoundException("Recommendation not found with ID: " + recommendationId))
+//                        .getDoctorId(),
+//                roomId,
+//                bedId,
+//                reason
+//        );
+//    }
+//    
 }

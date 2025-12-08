@@ -25,6 +25,8 @@ public class IpdBillingDetailsResponse {
     private Double totalBeforeDiscount;
     private Double totalAfterDiscountAndGst;
     private List<IPDServiceUsageDTO> ipdServices;  // NEW: Add this field to match the JSON
+    private Double advanceAmount;
+    
 
     // Inner DTO for BillingMaster (unchanged)
     public static class BillingMasterDTO {
@@ -37,6 +39,7 @@ public class IpdBillingDetailsResponse {
         private String paymentStatus;
         private String paymentMode;
         private LocalDateTime billingDate;
+        private String advancePaymentMode;
 
         // Getters and Setters (unchanged)
         public Long getId() { return id; }
@@ -57,6 +60,12 @@ public class IpdBillingDetailsResponse {
         public void setPaymentMode(String paymentMode) { this.paymentMode = paymentMode; }
         public LocalDateTime getBillingDate() { return billingDate; }
         public void setBillingDate(LocalDateTime billingDate) { this.billingDate = billingDate; }
+		public String getAdvancePaymentMode() {
+			return advancePaymentMode;
+		}
+		public void setAdvancePaymentMode(String advancePaymentMode) {
+			this.advancePaymentMode = advancePaymentMode;
+		}
     }
 
     // NEW: Nested DTO for each service item (matches the JSON structure)
@@ -124,4 +133,10 @@ public class IpdBillingDetailsResponse {
     public void setTotalAfterDiscountAndGst(Double totalAfterDiscountAndGst) { this.totalAfterDiscountAndGst = totalAfterDiscountAndGst; }
     public List<IPDServiceUsageDTO> getIpdServices() { return ipdServices; }  // NEW
     public void setIpdServices(List<IPDServiceUsageDTO> ipdServices) { this.ipdServices = ipdServices; }  // NEW
+	public Double getAdvanceAmount() {
+		return advanceAmount;
+	}
+	public void setAdvanceAmount(Double advanceAmount) {
+		this.advanceAmount = advanceAmount;
+	}
 }

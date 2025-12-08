@@ -3,5 +3,7 @@ package com.ipd.enums;
 public enum VitalType {
     ADMISSION,
     CURRENT,
-    DISCHARGE
+    DISCHARGE,
+    EMERGENCY_VITAL,
+    OPD_VITAL
 }
