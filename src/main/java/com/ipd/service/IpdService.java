@@ -6,6 +6,7 @@ import java.util.List;
 import com.ipd.dto.AdmissionChartPoint;
 import com.ipd.dto.IpdAdmissionUpdateRequest;
 import com.ipd.dto.IpdDashboardSummary;
+import com.ipd.dto.IpdPaymentHistoryResponseDTO;
 import com.ipd.dto.IpdPaymentRequestDTO;
 import com.ipd.entity.IpdAdmission;
 import com.ipd.entity.IpdBilling;
@@ -62,6 +63,8 @@ public interface IpdService {
 	List<IpdAdmission> getAllDischargeAdmissionsForHospital();
 
 	IpdAdmission updateAdmissionFully(Long id, IpdAdmissionUpdateRequest request);
+
+	List<IpdPaymentHistoryResponseDTO> getPaymentHistory(Long admissionId);
 
     
 }

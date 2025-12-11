@@ -29,6 +29,7 @@ public class IpdTrackingServiceImpl implements IpdTrackingService {
                 .fee(fee)
                 .notes(notes)
                 .visitCount(1)
+                .totalDoctorFees(fee * 1)  // NEW LOGIC
                 .build();
         return doctorVisitRepo.save(visit);
     }

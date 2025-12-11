@@ -13,6 +13,7 @@ import com.ipd.dto.IpdAdmissionUpdateRequest;
 import com.ipd.dto.IpdBillRequestDTO;
 import com.ipd.dto.IpdBillUpdateRequestDTO;
 import com.ipd.dto.IpdDashboardSummary;
+import com.ipd.dto.IpdPaymentHistoryResponseDTO;
 import com.ipd.dto.IpdPaymentRequestDTO;
 import com.ipd.repository.*;
 import com.ipd.Exception.AccessDeniedException;
@@ -39,6 +40,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -401,8 +403,6 @@ public class IpdServiceImpl implements IpdService {
 
         // === ROOM CHARGES ===
       double roomCharges = admission.getBed().getRoom().getPrice() * daysAdmitted;
-//        double roomCharges = admission.getBed().getBedNumber().
-
 
         // === DOCTOR VISITS ===
 //        double doctorFees = visits.stream().mapToDouble(IpdDoctorVisit::getFee).sum();
@@ -412,19 +412,40 @@ public class IpdServiceImpl implements IpdService {
 //       double doctorFee = doctor.getConsultationFee() * daysAdmitted;
         
      // NEW CORRECT WAY — uses actual recorded visits + counts
-        double doctorFee = doctorVisitService.calculateTotalDoctorFees(admissionId) * daysAdmitted;
-       
+//        double doctorFee = doctorVisitService.calculateTotalDoctorFees(admissionId) * daysAdmitted;
+      double doctorFee = doctorVisitService.calculateTotalDoctorFees(admissionId);
 
         // === MEDICATIONS (from tracking) ===
         double medicationCharges = meds.stream()
                 .mapToDouble(m -> m.getQuantity() * m.getPricePerUnit())
                 .sum();
+        
+     // === NEW ITEMIZED MISC FEES (LIST FORMAT) ===
+        double miscListDailyTotal = pricing.getMiscellaneousCharges() != null
+                ? pricing.getMiscellaneousCharges()
+                        .stream()
+                        .mapToDouble(MiscellaneousCharges::getCharge)
+                        .sum()
+                : 0.0;
 
+        // Multiply list prices × days admitted
+        double miscListTotal = miscListDailyTotal * daysAdmitted;
+        
+     // === EXTRA ONE-TIME MISC SERVICES (from tracking) ===
+        double extraMisc = services.stream()
+                .filter(s -> "MISC".equalsIgnoreCase(s.getServiceType()))
+                .mapToDouble(IpdServiceRendered::getCharge)
+                .sum();
+
+        
+        
+     // === FINAL MISC CHARGES — OLD FIELD REMOVED ===
+        double miscellaneousCharges = miscListTotal + extraMisc;
+        
         // === DAILY FIXED FEES (from IpdHospitalPricing) ===
         double dailyNursing = pricing.getNursingFee() * daysAdmitted;
         double dailyFood = pricing.getFoodFee() * daysAdmitted;
         double dailyDiagnostic = pricing.getDiagnosticFee() * daysAdmitted;
-        double dailyMisc = pricing.getMiscellaneousFee() * daysAdmitted;
 
         // === ADDITIONAL ONE-TIME SERVICES (from IpdServiceRendered) ===
         double extraNursing = services.stream()
@@ -447,16 +468,15 @@ public class IpdServiceImpl implements IpdService {
                 .mapToDouble(IpdServiceRendered::getCharge)
                 .sum();
 
-        double extraMisc = services.stream()
-                .filter(s -> "MISC".equalsIgnoreCase(s.getServiceType()))
-                .mapToDouble(IpdServiceRendered::getCharge)
-                .sum();
+//        double extraMisc = services.stream()
+//                .filter(s -> "MISC".equalsIgnoreCase(s.getServiceType()))
+//                .mapToDouble(IpdServiceRendered::getCharge)
+//                .sum();
 
         // === FINAL CHARGES ===
         double nursingCharges = dailyNursing + extraNursing;
         double foodCharges = dailyFood + extraFood;
         double diagnosticCharges = dailyDiagnostic + extraDiagnostic;
-        double miscellaneousCharges = dailyMisc + extraMisc;
         double procedureCharges = extraProcedure; // Usually not daily
 
         // === BUILD DTO ===
@@ -519,12 +539,32 @@ public class IpdServiceImpl implements IpdService {
 //        double doctorFee = doctor.getConsultationFee() * daysAdmitted;
         
      // === DOCTOR VISITS (NEW ACCURATE WAY) ===
-        double doctorFee = doctorVisitService.calculateTotalDoctorFees(admissionId) * daysAdmitted;
+//        double doctorFee = doctorVisitService.calculateTotalDoctorFees(admissionId) * daysAdmitted;
+        double doctorFee = doctorVisitService.calculateTotalDoctorFees(admissionId);
+        System.out.println("IPD mai doctor fess ayi kya:" + doctorFee);
 
         double dailyNursing = pricing.getNursingFee() * daysAdmitted;
         double dailyFood = pricing.getFoodFee() * daysAdmitted;
         double dailyDiagnostic = pricing.getDiagnosticFee() * daysAdmitted;
-        double dailyMisc = pricing.getMiscellaneousFee() * daysAdmitted;
+        
+     // === NEW ITEMIZED MISC FEES (LIST FORMAT) ===
+        double miscListDailyTotal = pricing.getMiscellaneousCharges() != null
+                ? pricing.getMiscellaneousCharges()
+                        .stream()
+                        .mapToDouble(MiscellaneousCharges::getCharge)
+                        .sum()
+                : 0.0;
+        
+        double miscListTotal = miscListDailyTotal * daysAdmitted;
+        
+     // === EXTRA ONE-TIME MISC SERVICES ===
+        double extraMisc = services.stream()
+                .filter(s -> "MISC".equalsIgnoreCase(s.getServiceType()))
+                .mapToDouble(IpdServiceRendered::getCharge)
+                .sum();
+        
+     // === FINAL MISCELLANEOUS CHARGES (NEW SYSTEM) ===
+        double miscellaneousCharges = miscListTotal + extraMisc;
 
         // Extra one-time services
         double extraNursing = services.stream()
@@ -543,9 +583,6 @@ public class IpdServiceImpl implements IpdService {
                 .filter(s -> "FOOD".equalsIgnoreCase(s.getServiceType()))
                 .mapToDouble(IpdServiceRendered::getCharge).sum();
 
-        double extraMisc = services.stream()
-                .filter(s -> "MISC".equalsIgnoreCase(s.getServiceType()))
-                .mapToDouble(IpdServiceRendered::getCharge).sum();
 
         double medicationCharges = meds.stream()
                 .mapToDouble(m -> m.getQuantity() * m.getPricePerUnit())
@@ -565,7 +602,9 @@ public class IpdServiceImpl implements IpdService {
         request.setNursingChargesPerDay(pricing.getNursingFee());
         request.setFoodChargesPerDay(pricing.getFoodFee());
         request.setDiagnosticChargesPerDay(pricing.getDiagnosticFee());
-        request.setMiscChargesPerDay(pricing.getMiscellaneousFee());
+//        request.setMiscChargesPerDay(pricing.getMiscellaneousFee());
+        request.setMiscellaneousCharges(miscellaneousCharges);
+
 
         // Send CURRENT accumulated values
         request.setMedicationCharges(medicationCharges);
@@ -643,8 +682,12 @@ public class IpdServiceImpl implements IpdService {
     //---------------------------------
     @Override
     public String processPayment(IpdPaymentRequestDTO request) {	
-    	String billingApiUrl = billingBaseUrl+ "ipd/payment";
+    	// OLD (WRONG) → full payment only
+//    	String billingApiUrl = billingBaseUrl+ "ipd/payment";  //->Full payment End-Point 
 
+    	// NEW → PARTIAL PAYMENT (supports chunks)
+    	String billingApiUrl = billingBaseUrl+ "ipd/partial-payment"; //-> Partial Payment End-Point
+    	
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<IpdPaymentRequestDTO> entity = new HttpEntity<>(request, headers);
@@ -652,6 +695,24 @@ public class IpdServiceImpl implements IpdService {
 
         return response.getBody();
     }
+    
+ // IpdServiceImpl.java
+    @Override
+    public List<IpdPaymentHistoryResponseDTO> getPaymentHistory(Long admissionId) {
+        String url = billingBaseUrl + "ipd/payment-history/" + admissionId;
+
+        try {
+            ResponseEntity<IpdPaymentHistoryResponseDTO[]> response =
+                    restTemplate.getForEntity(url, IpdPaymentHistoryResponseDTO[].class);
+
+            return Arrays.asList(response.getBody());
+        } catch (Exception e) {
+            System.err.println("Failed to fetch payment history for admissionId: " + admissionId 
+                               + " | Error: " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
     
     //This method will call the billing API to check if the payment is done or not!
 //    @Transactional
@@ -997,5 +1058,5 @@ public class IpdServiceImpl implements IpdService {
 //                reason
 //        );
 //    }
-//    
+    
 }

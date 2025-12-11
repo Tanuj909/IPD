@@ -25,8 +25,7 @@ public class IpdBillRequestDTO {
     private double gstPercentage;
     private Double advanceAmount;         // ← Add
     private String advancePaymentMode;    // ← Add (CASH, UPI, CARD, etc.)
- 
-    
+    private Double totalPayment;
     
 
 }

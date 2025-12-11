@@ -8,6 +8,7 @@ import com.ipd.dto.AdmissionChartPoint;
 import com.ipd.dto.IpdAdmissionUpdateRequest;
 import com.ipd.dto.IpdBillingDetailsResponse;
 import com.ipd.dto.IpdDashboardSummary;
+import com.ipd.dto.IpdPaymentHistoryResponseDTO;
 import com.ipd.dto.IpdPaymentRequestDTO;
 import com.ipd.dto.IpdRecommendationCreateDTO;
 import com.ipd.dto.IpdRecommendationResponseDTO;
@@ -55,8 +56,8 @@ public class IpdController {
     @Autowired
     private IpdBillingRepository billingRepo;
     
-//    @Autowired
-//    private IpdRecommendationService ipdRecommendationService;
+    @Autowired
+    private IpdRecommendationService ipdRecommendationService;
     
     @Autowired
     private UserRepository userRepository;
@@ -201,12 +202,22 @@ public class IpdController {
 
     
     
-    // IPD payment
+    // IPD payment(Billing module)
     @PostMapping("/payment")
     public ResponseEntity<String> makePayment(@RequestBody IpdPaymentRequestDTO request) {	
         String result = ipdService.processPayment(request); 
         return ResponseEntity.ok(result);
     }
+    
+ // IpdController.java
+    @GetMapping("/payment-history/{admissionId}")
+    public ResponseEntity<List<IpdPaymentHistoryResponseDTO>> getPaymentHistory(
+            @PathVariable Long admissionId) {
+        
+        List<IpdPaymentHistoryResponseDTO> history = ipdService.getPaymentHistory(admissionId);
+        return ResponseEntity.ok(history);
+    }
+    
     
     //This Discharge API is only  
     @PostMapping("/discharge-patient/{admissionId}")
@@ -370,46 +381,48 @@ public class IpdController {
   
 //New End Points for IPD Recommendations
   
-//  @PostMapping("/recommend")
-//  @PreAuthorize("hasRole('DOCTOR')")
-//  public ResponseEntity<IpdRecommendationResponseDTO> createRecommendation(@Valid @RequestBody IpdRecommendationCreateDTO dto){
-//	  return ResponseEntity.ok(ipdRecommendationService.createRecommendation(dto));
-//  }
+  @PostMapping("/recommend")
+  @PreAuthorize("hasRole('DOCTOR')")
+  public ResponseEntity<IpdRecommendationResponseDTO> createRecommendation(@Valid @RequestBody IpdRecommendationCreateDTO dto){
+	  return ResponseEntity.ok(ipdRecommendationService.createRecommendation(dto));
+  }
 //  
-//  @GetMapping("/recommend/self")
-//  @PreAuthorize("hasRole('PATIENT')")
-//  public ResponseEntity<List<IpdRecommendationResponseDTO>> getPatientRecommendations() {
-//      String email = SecurityContextHolder.getContext().getAuthentication().getName();
-//      return ResponseEntity.ok(ipdRecommendationService.getRecommendationsByPatient(email));
-//  }
+  @GetMapping("/recommend/self")
+  @PreAuthorize("hasRole('PATIENT')")
+  public ResponseEntity<List<IpdRecommendationResponseDTO>> getPatientRecommendations() {
+      String email = SecurityContextHolder.getContext().getAuthentication().getName();
+      return ResponseEntity.ok(ipdRecommendationService.getRecommendationsByPatient(email));
+  }
 
-//  @GetMapping("/recommend/doctor/self")
-//  @PreAuthorize("hasRole('DOCTOR')")
-//  public ResponseEntity<List<IpdRecommendationResponseDTO>> getDoctorRecommendations() {
-//      String email = SecurityContextHolder.getContext().getAuthentication().getName();
-//      return ResponseEntity.ok(ipdRecommendationService.getRecommendationsByDoctor(email));
-//  }
+  @GetMapping("/recommend/doctor/self")
+  @PreAuthorize("hasRole('DOCTOR')")
+  public ResponseEntity<List<IpdRecommendationResponseDTO>> getDoctorRecommendations() {
+      String email = SecurityContextHolder.getContext().getAuthentication().getName();
+      return ResponseEntity.ok(ipdRecommendationService.getRecommendationsByDoctor(email));
+  }
 //
-//  @PostMapping("/recommend/{recommendationId}/admit")
-//  @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
-//  public ResponseEntity<IpdAdmission> convertRecommendationToAdmission(
-//          @PathVariable Long recommendationId,
-//          @RequestParam Long roomId,
-//          @RequestParam Long bedId    
-//  ) {
-//      return ResponseEntity.ok(ipdRecommendationService.convertToAdmission(recommendationId, roomId, bedId));
-//  }
+  @PostMapping("/recommend/{recommendationId}/admit")
+  @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
+  public ResponseEntity<IpdAdmission> convertRecommendationToAdmission(
+          @PathVariable Long recommendationId,
+          @RequestParam Long roomId,
+          @RequestParam Long bedId,  
+          @RequestParam(required = false) Double advanceAmount,
+          @RequestParam(required = false) String advancePaymentMode
+  ) {
+      return ResponseEntity.ok(ipdRecommendationService.convertToAdmission(recommendationId, roomId, bedId,advanceAmount, advancePaymentMode));
+  }
   
-//  @GetMapping("/recommend/pending")
-//  @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
-//  public ResponseEntity<List<IpdRecommendationResponseDTO>> getPendingRecommendations() {
-//      User currentUser = userRepository.findByEmail(SecurityContextHolder.getContext().getAuthentication().getName())
-//              .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-//      
-//      IpdHospital hospital = hospitalRepository.findById(currentUser.getIpdHospitalId()).orElseThrow(()->new AccessDeniedException("User is not mapped to any hospital"));
-//      
-//      return ResponseEntity.ok(ipdRecommendationService.getPendingRecommendationsByHospital(hospital));
-//  }
+  @GetMapping("/recommend/pending")
+  @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST')")
+  public ResponseEntity<List<IpdRecommendationResponseDTO>> getPendingRecommendations() {
+      User currentUser = userRepository.findByEmail(SecurityContextHolder.getContext().getAuthentication().getName())
+              .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+      
+      IpdHospital hospital = hospitalRepository.findById(currentUser.getIpdHospitalId()).orElseThrow(()->new AccessDeniedException("User is not mapped to any hospital"));
+      
+      return ResponseEntity.ok(ipdRecommendationService.getPendingRecommendationsByHospital(hospital));
+  }
   
 
   

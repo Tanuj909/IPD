@@ -20,6 +20,8 @@ public class IpdBillUpdateRequestDTO {
     private Double foodChargesPerDay;
     private Double diagnosticChargesPerDay;
     private Double miscChargesPerDay;
+    
+    private Double MiscellaneousCharges;
 
     // One-time / accumulated charges (already in DB)
     private Double medicationCharges;

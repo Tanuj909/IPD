@@ -29,8 +29,15 @@ public class DoctorVisitServiceImpl implements DoctorVisitService {
 
         IpdDoctorVisit visit = doctorVisitRepo.findById(visitId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor visit not found"));
+        
+        Doctor doctor = doctorRepo.findById(visit.getDoctorId())
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
+        
+        double perVisitFee = (visit.getFee() != null) ? visit.getFee() : doctor.getConsultationFee();
 
         visit.setVisitCount(visitCount);
+        visit.setTotalDoctorFees(perVisitFee * visitCount);   // NEW LOGIC
+        
         return doctorVisitRepo.save(visit);
     }
 
@@ -39,19 +46,28 @@ public class DoctorVisitServiceImpl implements DoctorVisitService {
         return doctorVisitRepo.findByAdmissionId(admissionId);
     }
 
+//    @Override
+//    public double calculateTotalDoctorFees(Long admissionId) {
+//        List<IpdDoctorVisit> visits = doctorVisitRepo.findByAdmissionId(admissionId);
+//
+//        return visits.stream()
+//                .mapToDouble(visit -> {
+//                    Doctor doctor = doctorRepo.findById(visit.getDoctorId())
+//                            .orElseThrow(() ->
+//                                    new ResourceNotFoundException("Doctor not found with ID: " + visit.getDoctorId()));
+//
+//                    double perVisitFee = (visit.getFee() != null) ? visit.getFee() : doctor.getConsultationFee(); // Use custom fee if set, else default
+//                    return visit.getVisitCount() * perVisitFee;
+//                })
+//                .sum();
+//    }
+    
     @Override
     public double calculateTotalDoctorFees(Long admissionId) {
-        List<IpdDoctorVisit> visits = doctorVisitRepo.findByAdmissionId(admissionId);
-
-        return visits.stream()
-                .mapToDouble(visit -> {
-                    Doctor doctor = doctorRepo.findById(visit.getDoctorId())
-                            .orElseThrow(() ->
-                                    new ResourceNotFoundException("Doctor not found with ID: " + visit.getDoctorId()));
-
-                    double perVisitFee = (visit.getFee() != null) ? visit.getFee() : doctor.getConsultationFee(); // Use custom fee if set, else default
-                    return visit.getVisitCount() * perVisitFee;
-                })
+        return doctorVisitRepo.findByAdmissionId(admissionId)
+                .stream()
+                .mapToDouble(v -> v.getTotalDoctorFees() != null ? v.getTotalDoctorFees() : 0.0)
                 .sum();
     }
+
 }

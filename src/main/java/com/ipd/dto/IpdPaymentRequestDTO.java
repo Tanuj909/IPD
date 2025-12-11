@@ -7,5 +7,6 @@ import lombok.Setter;
 @Setter
 public class IpdPaymentRequestDTO {
     private Long admissionId;
+    private Double amount;  //-> Added for Partial Payment
     private String paymentMode;
 }

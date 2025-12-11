@@ -25,4 +25,5 @@ public class IpdDoctorVisit {
     private String notes;
     // NEW: Visit count field
     private Integer visitCount = 1;
+    private Double totalDoctorFees;
 }
