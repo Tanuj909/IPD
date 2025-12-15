@@ -80,6 +80,7 @@ public class SecurityConfig {
                                 "http://147.93.28.8:4004",
                                 "http://147.93.28.8:4005",
                                 "http://147.93.28.8:4006",
+                                "http://147.93.28.8:4008",
                                 "http://127.0.0.1:5500"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")

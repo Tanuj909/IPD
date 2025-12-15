@@ -24,6 +24,8 @@ public class IpdHospitalPricing {
     private double nursingFee;
     private double foodFee;
     private double diagnosticFee;
+    
+    @Column(nullable = true)
     private double miscellaneousFee;
 
     // ----- GLOBAL SETTINGS -----
@@ -50,6 +52,11 @@ public class IpdHospitalPricing {
             joinColumns = @JoinColumn(name = "pricing_id"))
     private List<MiscellaneousCharges> miscellaneousCharges;
     
+ // ----- OT Charges (Operation theator) -----
+//    @ElementCollection
+//    @CollectionTable(name = "ipd_ot_charges",
+//    joinColumns = @JoinColumn(name="pricing_id"))
+//    private List<OtCharges> otCharges;
     
     private LocalDateTime pricingCreatedAt = LocalDateTime.now();
 }

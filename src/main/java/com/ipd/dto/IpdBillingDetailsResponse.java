@@ -27,6 +27,7 @@ public class IpdBillingDetailsResponse {
     private List<IPDServiceUsageDTO> ipdServices;  // NEW: Add this field to match the JSON
     private Double advanceAmount;
     private Double dueAmmount;
+    private String billingStatus;
     
 
     // Inner DTO for BillingMaster (unchanged)
@@ -145,5 +146,11 @@ public class IpdBillingDetailsResponse {
 	}
 	public void setDueAmmount(Double dueAmmount) {
 		this.dueAmmount = dueAmmount;
+	}
+	public String getBillingStatus() {
+		return billingStatus;
+	}
+	public void setBillingStatus(String billingStatus) {
+		this.billingStatus = billingStatus;
 	}
 }

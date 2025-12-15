@@ -60,13 +60,13 @@ public class IpdOutcomeServiceImpl implements IpdOutcomeService {
 		}
 
 //		// Check Billing Status (Must be PAID)
-//		String billingApiUrl = billingBaseUrl + "ipd/status?admissionId=" + admissionId;
-//
-//		ResponseEntity<String> response = restTemplate.getForEntity(billingApiUrl, String.class);
-//
-//		if (!"PAID".equalsIgnoreCase(response.getBody())) {
-//			throw new IllegalStateException("Cannot discharge! Billing not fully paid.");
-//		}
+		String billingApiUrl = billingBaseUrl + "ipd/status?admissionId=" + admissionId;
+
+		ResponseEntity<String> response = restTemplate.getForEntity(billingApiUrl, String.class);
+
+		if (!"PAID".equalsIgnoreCase(response.getBody())) {
+			throw new IllegalStateException("Cannot discharge! Billing not fully paid.");
+		}
 
 		// Save Outcome
 		req.setOutcomeDate(LocalDateTime.now());
@@ -81,6 +81,15 @@ public class IpdOutcomeServiceImpl implements IpdOutcomeService {
 		admission.setOutcomeCreated(true);
 		admission.setDischargeDate(LocalDateTime.now());
 		admissionRepo.save(admission);
+
+	    // --- 4️⃣ CLOSE BILLING IN BILLING MICRO-SERVICE ---
+	    String closeBillUrl = billingBaseUrl + "ipd/close-bill/" + admissionId;
+	    
+	    try {
+			restTemplate.postForObject(closeBillUrl, null, Void.class);
+		} catch (Exception e) {
+			throw new RuntimeException("Outcome saved but billing could NOT be closed: " + e.getMessage());
+		}
 
 		return saved;
 	}

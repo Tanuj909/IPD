@@ -696,6 +696,23 @@ public class IpdServiceImpl implements IpdService {
         return response.getBody();
     }
     
+//    @Override
+//    public String closeBillOnDischarge(Long admissionId) {	
+//    	// OLD (WRONG) → full payment only
+////    	String billingApiUrl = billingBaseUrl+ "ipd/payment";  //->Full payment End-Point 
+//
+//    	// NEW → PARTIAL PAYMENT (supports chunks)
+//    	String billingApiUrl = billingBaseUrl+ "ipd/partial-payment"; //-> Partial Payment End-Point
+//    	
+//        HttpHeaders headers = new HttpHeaders();
+//        headers.setContentType(MediaType.APPLICATION_JSON);
+//        HttpEntity<IpdPaymentRequestDTO> entity = new HttpEntity<>(admissionId, headers);
+//        ResponseEntity<String> response = restTemplate.postForEntity(billingApiUrl, entity, String.class);
+//
+//        return response.getBody();
+//    }
+    
+    
  // IpdServiceImpl.java
     @Override
     public List<IpdPaymentHistoryResponseDTO> getPaymentHistory(Long admissionId) {
@@ -1041,6 +1058,7 @@ public class IpdServiceImpl implements IpdService {
 //                .map(IpdModuleSetting::isEnabled)
 //                .orElse(false);
     }
+
     
 //    @Override
 //    @Transactional

@@ -66,5 +66,7 @@ public interface IpdService {
 
 	List<IpdPaymentHistoryResponseDTO> getPaymentHistory(Long admissionId);
 
+//	String closeBillOnDischarge(Long admissionId);
+
     
 }

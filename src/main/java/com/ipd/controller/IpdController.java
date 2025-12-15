@@ -204,7 +204,7 @@ public class IpdController {
     
     // IPD payment(Billing module)
     @PostMapping("/payment")
-    public ResponseEntity<String> makePayment(@RequestBody IpdPaymentRequestDTO request) {	
+    public ResponseEntity<String> closeBillOnDischarge(@RequestBody IpdPaymentRequestDTO request) {	
         String result = ipdService.processPayment(request); 
         return ResponseEntity.ok(result);
     }
@@ -329,6 +329,8 @@ public class IpdController {
   ) {
       return ResponseEntity.ok(ipdService.getAdmissionChart(from, to));
   }
+  
+  
   @PutMapping("/billing/pay/{admissionId}")
   public ResponseEntity<IpdBilling> payBill(
           @PathVariable Long admissionId,
