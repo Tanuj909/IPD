@@ -1,26 +1,3 @@
-//package com.ipd.dto;
-//
-//import java.time.LocalDateTime;
-//import java.util.List;
-//import lombok.Data;
-//import lombok.Getter;
-//import lombok.Setter;
-//
-//@Data
-//@Getter
-//@Setter
-//public class SendServiceRequest {
-//    private Long ipdBillingId;
-//    private List<ServiceItem> services;
-//    
-//    @Data
-//    public static class ServiceItem {
-//        private String serviceName;
-//        private Double price;
-//        private Integer quantity;
-//    }
-//}
-
 // SendServiceRequest.java
 package com.ipd.dto;
 
@@ -36,6 +13,8 @@ public class SendServiceRequest {
     public static class ServiceItem {
         private String serviceName;
         private Double price;
-        private Integer quantity;
+        private Integer quantity = 1;
+        private Double gstPercentage = 0.0;  // NEW: Critical for correct GST
+        private String serviceType;          // Optional: "DIAGNOSTIC", "NURSING", etc.
     }
 }

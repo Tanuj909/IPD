@@ -20,7 +20,7 @@ public class IpdBillUpdateRequestDTO {
     private Double foodChargesPerDay;
     private Double diagnosticChargesPerDay;
     private Double miscChargesPerDay;
-    
+
     private Double MiscellaneousCharges;
 
     // One-time / accumulated charges (already in DB)
@@ -31,4 +31,5 @@ public class IpdBillUpdateRequestDTO {
 
     private Double discountPercentage;
     private Double gstPercentage;
+    private Double totalGstAmount;
 }

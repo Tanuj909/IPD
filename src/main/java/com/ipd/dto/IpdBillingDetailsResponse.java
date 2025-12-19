@@ -20,7 +20,7 @@ public class IpdBillingDetailsResponse {
     private Double total;
     private Double discountPercentage;
     private Double discountAmount;
-    private Double gstPercentage;
+//    private Double gstPercentage;
     private Double gstAmount;
     private Double totalBeforeDiscount;
     private Double totalAfterDiscountAndGst;
@@ -28,6 +28,8 @@ public class IpdBillingDetailsResponse {
     private Double advanceAmount;
     private Double dueAmmount;
     private String billingStatus;
+    private Double totalPayedAmmount;
+    private Double dueTotalPayable;
     
 
     // Inner DTO for BillingMaster (unchanged)
@@ -78,6 +80,8 @@ public class IpdBillingDetailsResponse {
         private Integer quantity;
         private Double totalAmount;
         private LocalDateTime serviceAddDate;
+        private Double gstPercentage;
+        private Double gstAmount;
 
         // Getters and Setters
         public Long getId() { return id; }
@@ -92,6 +96,18 @@ public class IpdBillingDetailsResponse {
         public void setTotalAmount(Double totalAmount) { this.totalAmount = totalAmount; }
         public LocalDateTime getServiceAddDate() { return serviceAddDate; }
         public void setServiceAddDate(LocalDateTime serviceAddDate) { this.serviceAddDate = serviceAddDate; }
+		public Double getGstAmount() {
+			return gstAmount;
+		}
+		public void setGstAmount(Double gstAmount) {
+			this.gstAmount = gstAmount;
+		}
+		public Double getGstPercentage() {
+			return gstPercentage;
+		}
+		public void setGstPercentage(Double gstPercentage) {
+			this.gstPercentage = gstPercentage;
+		}
     }
 
     // Getters and Setters for outer class (add the new ones for ipdServices)
@@ -125,8 +141,8 @@ public class IpdBillingDetailsResponse {
     public void setDiscountPercentage(Double discountPercentage) { this.discountPercentage = discountPercentage; }
     public Double getDiscountAmount() { return discountAmount; }
     public void setDiscountAmount(Double discountAmount) { this.discountAmount = discountAmount; }
-    public Double getGstPercentage() { return gstPercentage; }
-    public void setGstPercentage(Double gstPercentage) { this.gstPercentage = gstPercentage; }
+//    public Double getGstPercentage() { return gstPercentage; }
+//    public void setGstPercentage(Double gstPercentage) { this.gstPercentage = gstPercentage; }
     public Double getGstAmount() { return gstAmount; }
     public void setGstAmount(Double gstAmount) { this.gstAmount = gstAmount; }
     public Double getTotalBeforeDiscount() { return totalBeforeDiscount; }
@@ -152,5 +168,17 @@ public class IpdBillingDetailsResponse {
 	}
 	public void setBillingStatus(String billingStatus) {
 		this.billingStatus = billingStatus;
+	}
+	public Double getTotalPayedAmmount() {
+		return totalPayedAmmount;
+	}
+	public void setTotalPayedAmmount(Double totalPayedAmmount) {
+		this.totalPayedAmmount = totalPayedAmmount;
+	}
+	public Double getDueTotalPayable() {
+		return dueTotalPayable;
+	}
+	public void setDueTotalPayable(Double dueTotalPayable) {
+		this.dueTotalPayable = dueTotalPayable;
 	}
 }

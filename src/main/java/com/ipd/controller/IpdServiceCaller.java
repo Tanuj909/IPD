@@ -31,23 +31,17 @@ public class IpdServiceCaller {
 
         String url = BILLING_SERVICE_URL + "/" + billingId + "/services";
 
-        // The target service expects only { services: [...] }
-        // It will set ipdBillingId from path variable itself
-        var payload = new SendServiceRequest();
-        payload.setServices(request.getServices());
-
+        // Preserve all fields including gstPercentage
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<SendServiceRequest> entity = new HttpEntity<>(payload, headers);
+        HttpEntity<SendServiceRequest> entity = new HttpEntity<>(request, headers);
 
         try {
-            ResponseEntity<Object[]> response = restTemplate.postForEntity(
-                    url, entity, Object[].class);
-
+            ResponseEntity<Object[]> response = restTemplate.postForEntity(url, entity, Object[].class);
             return ResponseEntity.ok(List.of(response.getBody()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(List.of("Error: " + e.getMessage()));
+                    .body(List.of("Error adding services: " + e.getMessage()));
         }
     }
 }
