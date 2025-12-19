@@ -1,6 +1,7 @@
 package com.ipd.service.impl;
 
 import com.ipd.entity.*;
+import com.user.entity.Admin;
 import com.user.entity.Doctor;
 import com.user.entity.Patient;
 import com.user.entity.User;
@@ -8,6 +9,7 @@ import com.user.enums.Role;
 import com.user.repository.DoctorRepository;
 import com.user.repository.PatientRepository;
 import com.user.repository.UserRepository;
+import com.user.service.NotificationService;
 import com.ipd.dto.AdmissionChartPoint;
 import com.ipd.dto.IpdAdmissionUpdateRequest;
 import com.ipd.dto.IpdBillRequestDTO;
@@ -90,9 +92,11 @@ public class IpdServiceImpl implements IpdService {
     @Value("${billing.base.url}")   // <-- Inject value from application.properties
     private String billingBaseUrl;
     
- // ADD AUTOWIRED
     @Autowired
     private IpdTrackingService trackingService;
+    
+    @Autowired
+    private NotificationService notificationService;
     
     @Autowired
     private RestTemplate restTemplate;
@@ -106,6 +110,21 @@ public class IpdServiceImpl implements IpdService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
+    private Admin getAdmin(User user) {
+ 	   
+ 	   Admin admin;
+ 	   
+ 		if (user.getRole() == Role.ADMIN) {
+ 			admin = user.getAdmin();
+ 		} else if (user.getRole() == Role.DOCTOR) {
+ 			admin = user.getDoctor().getAdmin();
+ 		} else {
+ 			admin = user.getStaff().getAdmin();
+ 		}
+ 		
+ 		return admin;
+    }
+    
     private void checkAccess(IpdAdmission admission) {
         User currentUser = getCurrentUser();
         boolean isOwner = admission.getCreatedBy().equals(currentUser.getId());
@@ -250,6 +269,17 @@ public class IpdServiceImpl implements IpdService {
         IpdAdmission savedAdmission = ipdAdmissionRepo.save(admission);
         
         this.generateBilling(savedAdmission.getId(), advanceAmount, advancePaymentMode);
+        
+        Long adminId = getAdmin(getCurrentUser()).getId();
+        
+        notificationService.notifyAllStaffOfAdmin(
+                adminId,
+                "IPD Admission Created",
+                "New IPD admission created successfully (ID: " + admission.getId() + ")",
+                "IPD",
+                admission.getId(),
+                "IPD_ADMISSION"
+        );
 
 
         return ipdAdmissionRepo.save(savedAdmission);

@@ -20,6 +20,7 @@ import com.ipd.entity.IpdRoom;
 import com.ipd.entity.IpdServiceRendered;
 import com.user.repository.PatientRepository;
 import com.user.repository.UserRepository;
+import com.user.service.NotificationService;
 import com.ipd.Exception.AccessDeniedException;
 import com.ipd.Exception.ResourceNotFoundException;
 import com.ipd.repository.IpdBillingRepository;
@@ -79,7 +80,6 @@ public class IpdController {
     @Autowired
     private IpdTrackingService trackingService;
 
-
     // Admit patient
     @PostMapping("/admit")
     public ResponseEntity<IpdAdmission> admitPatient(
@@ -91,6 +91,7 @@ public class IpdController {
             @RequestParam(required = false) Double advanceAmount,
             @RequestParam(defaultValue = "CASH") String advancePaymentMode) {
         IpdAdmission admission = ipdService.admitPatient(patientId, doctorId, roomId,bedId, reason,advanceAmount, advancePaymentMode);
+
         return ResponseEntity.ok(admission);
     }
     

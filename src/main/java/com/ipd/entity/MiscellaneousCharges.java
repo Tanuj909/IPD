@@ -8,10 +8,15 @@ import lombok.Setter;
 @Getter
 @Setter
 public class MiscellaneousCharges {
-	
-	private String itemName;
-	private Double charge;
-	private boolean medicalItem;      // true → GST EXEMPT
-	private Double gstPercentage;     // 5 or 18 (only if medicalItem=false)
 
+    private String itemName;
+    private Double charge;
+
+    // TRUE  → GST EXEMPT (medical)
+    // FALSE → GST APPLICABLE (non-medical)
+    // NULL  → old data (handle safely)
+    private Boolean medicalItem;
+
+    // 5 or 18 (only if medicalItem = false)
+    private Double gstPercentage;
 }

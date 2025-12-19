@@ -24,8 +24,6 @@ public class IpdHospitalPricing {
     private double nursingFee;
     private double foodFee;
     private double diagnosticFee;
-    
-    @Column(nullable = true)
     private double miscellaneousFee;
 
     // ----- GLOBAL SETTINGS -----
@@ -51,6 +49,7 @@ public class IpdHospitalPricing {
     @CollectionTable(name = "ipd_miscellaneous_charges",
             joinColumns = @JoinColumn(name = "pricing_id"))
     private List<MiscellaneousCharges> miscellaneousCharges;
+    
     
  // ----- OT Charges (Operation theator) -----
 //    @ElementCollection
