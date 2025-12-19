@@ -29,7 +29,7 @@ public class IpdVital {
     private Long createdBy;  // nurse / doctor user id
     private LocalDateTime createdAt;
     
-    private LocalDateTime updatedAt;
+    private LocalDateTime updatedAt;     
     
     @Enumerated(EnumType.STRING)
     private VitalType type;
