@@ -57,7 +57,7 @@ public class IpdNotificationScheduler {
      }
      
 
-    @Scheduled(cron = "0 0 11 * * ?")
+    @Scheduled(cron = "0 0 */3 * * ?")
 //    @Scheduled(cron = "0 * * * * ?")
     public void sendDailyIpdReminders() {
 

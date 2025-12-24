@@ -1510,8 +1510,6 @@ public class IpdServiceImpl implements IpdService {
                 "IPD_ADMISSION"
         );
 
-        this.generateBilling(savedAdmission.getId(), advanceAmount, advancePaymentMode);
-
         return ipdAdmissionRepo.save(savedAdmission);
     }
 
