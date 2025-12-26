@@ -18,6 +18,7 @@ import com.ipd.entity.IpdDoctorVisit;
 import com.ipd.entity.IpdModuleSetting;
 import com.ipd.entity.IpdRoom;
 import com.ipd.entity.IpdServiceRendered;
+import com.ipd.enums.IsDaily;
 import com.user.repository.PatientRepository;
 import com.user.repository.UserRepository;
 import com.user.service.NotificationService;
@@ -130,8 +131,9 @@ public class IpdController {
             @PathVariable Long admissionId,
             @RequestParam Long doctorId,
             @RequestParam Double fee,
-            @RequestParam(required = false) String notes) {
-        return ResponseEntity.ok(trackingService.addDoctorVisit(admissionId, doctorId, fee, notes));
+            @RequestParam(required = false) String notes,
+            @RequestParam IsDaily isdaily) {
+        return ResponseEntity.ok(trackingService.addDoctorVisit(admissionId, doctorId, fee, notes,isdaily));
     }
 
  // Get all visits for an admission (to see current counts)

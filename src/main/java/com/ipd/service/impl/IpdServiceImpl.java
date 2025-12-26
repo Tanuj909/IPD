@@ -1222,6 +1222,7 @@
 package com.ipd.service.impl;
 
 import com.ipd.entity.*;
+import com.ipd.enums.IsDaily;
 import com.user.entity.Admin;
 import com.user.entity.Doctor;
 import com.user.entity.Patient;
@@ -1260,6 +1261,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
@@ -1608,8 +1610,9 @@ public class IpdServiceImpl implements IpdService {
             @PathVariable Long admissionId,
             @RequestParam Long doctorId,
             @RequestParam Double fee,
-            @RequestParam(required = false) String notes) {
-        return ResponseEntity.ok(trackingService.addDoctorVisit(admissionId, doctorId, fee, notes));
+            @RequestParam(required = false) String notes,
+            @RequestParam IsDaily isdaily) {
+        return ResponseEntity.ok(trackingService.addDoctorVisit(admissionId, doctorId, fee, notes,isdaily));
     }
 
     @PostMapping("/medication/{admissionId}")

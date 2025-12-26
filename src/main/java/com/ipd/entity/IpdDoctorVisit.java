@@ -27,5 +27,6 @@ public class IpdDoctorVisit {
     // NEW: Visit count field
     private Integer visitCount = 1;
     private Double totalDoctorFees;
+    @Enumerated(EnumType.STRING)
     private IsDaily isDaily;
 }

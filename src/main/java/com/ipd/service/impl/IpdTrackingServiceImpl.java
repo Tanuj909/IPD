@@ -1,6 +1,7 @@
 package com.ipd.service.impl;
 
 import com.ipd.entity.*;
+import com.ipd.enums.IsDaily;
 import com.ipd.repository.*;
 import com.ipd.service.IpdTrackingService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +21,7 @@ public class IpdTrackingServiceImpl implements IpdTrackingService {
 
     @Override
     @Transactional
-    public IpdDoctorVisit addDoctorVisit(Long admissionId, Long doctorId, Double fee, String notes) {
+    public IpdDoctorVisit addDoctorVisit(Long admissionId, Long doctorId, Double fee, String notes, IsDaily isDaily) {
         IpdAdmission admission = admissionRied(admissionId);
         IpdDoctorVisit visit = IpdDoctorVisit.builder()
                 .admission(admission)
@@ -30,6 +31,7 @@ public class IpdTrackingServiceImpl implements IpdTrackingService {
                 .notes(notes)
                 .visitCount(1)
                 .totalDoctorFees(fee * 1)  // NEW LOGIC
+                .isDaily(isDaily)
                 .build();
         return doctorVisitRepo.save(visit);
     }
