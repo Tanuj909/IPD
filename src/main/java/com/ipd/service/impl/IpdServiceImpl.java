@@ -1219,7 +1219,6 @@
 //}
 
 
-
 package com.ipd.service.impl;
 
 import com.ipd.entity.*;
@@ -1242,6 +1241,9 @@ import com.ipd.dto.IpdPaymentRequestDTO;
 import com.ipd.repository.*;
 import com.ipd.Exception.AccessDeniedException;
 import com.ipd.Exception.ResourceNotFoundException;
+import com.ipd.billing.dto.SpecialDiscountRequestDTO;
+import com.ipd.billing.dto.SpecialDiscountResponseDTO;
+import com.ipd.billing.dto.UpdateIsDailyRequest;
 import com.ipd.service.DoctorVisitService;
 import com.ipd.service.IpdService;
 import com.ipd.service.IpdTrackingService;
@@ -1259,6 +1261,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -2049,6 +2052,81 @@ public class IpdServiceImpl implements IpdService {
         ipdAdmissionRepo.save(admission);
     }
 
+    
+//-----------------------------------------Special Discount-----------------------------------------//
+    @Override
+    @Transactional
+    public SpecialDiscountResponseDTO specialDiscounts(SpecialDiscountRequestDTO request) {
+    	
+    	IpdAdmission admission = ipdAdmissionRepo.findById(request.getAdmissionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Admission not found"));
+    	
+    	// NEW → Special Discount (supports chunks)
+        String billingApiUrl = billingBaseUrl + "ipd/special-discount"; // -> Special Discount End-Point
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<SpecialDiscountRequestDTO> entity =
+                new HttpEntity<>(request, headers);
+
+        ResponseEntity<SpecialDiscountResponseDTO> response =
+                restTemplate.postForEntity(
+                        billingApiUrl,
+                        entity,
+                        SpecialDiscountResponseDTO.class
+                );
+        return response.getBody();
+    }
+    
+//
+    @Override
+    @Transactional
+    public String changeServiceDailyStatus(UpdateIsDailyRequest request) {
+
+        // Validate input
+        if (request.getAdmissionId() == null || request.getServiceUsageId() == null || request.getIsDaily() == null) {
+            throw new IllegalArgumentException("Admission ID, Service Usage ID, and isDaily status are required");
+        }
+
+        // Optional: Verify admission exists and user has access
+        IpdAdmission admission = ipdAdmissionRepo.findById(request.getAdmissionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Admission not found"));
+
+        checkAccess(admission);
+
+        if (admission.isDischarged()) {
+            throw new IllegalStateException("Cannot modify services for discharged patient");
+        }
+
+        // Prepare headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        // Correct: Use object directly (RestTemplate will serialize it to JSON)
+        HttpEntity<UpdateIsDailyRequest> entity = new HttpEntity<>(request, headers);
+
+        String billingApiUrl = billingBaseUrl + "/ipd/service/change-daily-status";
+
+        try {
+            // Execute PUT request
+            restTemplate.exchange(
+                    billingApiUrl,
+                    HttpMethod.PUT,
+                    entity,
+                    Void.class  // We don't expect response body
+            );
+
+            return "Service daily status successfully updated to " + request.getIsDaily();
+
+        } catch (HttpClientErrorException e) {
+            // Handle specific HTTP errors (e.g., 400, 404 from Billing)
+            throw new RuntimeException("Failed to update service status in Billing module: " + e.getResponseBodyAsString(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Error communicating with Billing service: " + e.getMessage(), e);
+        }
+    }
+    
     @Override
     public List<IpdAdmission> getAllDischargeAdmissionsForHospital() {
         checkIpdModuleAccess();

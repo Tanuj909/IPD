@@ -5,6 +5,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.ipd.enums.IsDaily;
 
 @Entity
 @Table(name = "ipd_doctor_visits")
@@ -26,4 +27,5 @@ public class IpdDoctorVisit {
     // NEW: Visit count field
     private Integer visitCount = 1;
     private Double totalDoctorFees;
+    private IsDaily isDaily;
 }

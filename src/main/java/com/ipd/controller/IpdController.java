@@ -23,6 +23,9 @@ import com.user.repository.UserRepository;
 import com.user.service.NotificationService;
 import com.ipd.Exception.AccessDeniedException;
 import com.ipd.Exception.ResourceNotFoundException;
+import com.ipd.billing.dto.SpecialDiscountRequestDTO;
+import com.ipd.billing.dto.SpecialDiscountResponseDTO;
+import com.ipd.billing.dto.UpdateIsDailyRequest;
 import com.ipd.repository.IpdBillingRepository;
 import com.ipd.repository.IpdHospitalRepository;
 import com.ipd.repository.IpdModuleSettingRepository;
@@ -194,13 +197,28 @@ public class IpdController {
         return ResponseEntity.ok(trackingService.getServices(admissionId));
     }
     
-    
     @GetMapping("/admissions/discharge")
     public ResponseEntity<List<IpdAdmission>> getDischargeAdmissions() {
         List<IpdAdmission> admissions = ipdService.getAllDischargeAdmissionsForHospital();
         return ResponseEntity.ok(admissions);
     }
 
+    
+//    Special Discount
+    @PostMapping("/Special-discount")
+    public ResponseEntity<SpecialDiscountResponseDTO> specialDiscount(@RequestBody SpecialDiscountRequestDTO request){
+    	return ResponseEntity.ok(ipdService.specialDiscounts(request));
+    }
+    
+    //
+    
+    @PutMapping("/service/change-daily-status")
+    public ResponseEntity<String> changeServiceDailyStatus(@RequestBody UpdateIsDailyRequest request) {
+        // Call the service method
+        String result = ipdService.changeServiceDailyStatus(request);
+        // Return success response
+        return ResponseEntity.ok(result);
+    }
     
     
     // IPD payment(Billing module)

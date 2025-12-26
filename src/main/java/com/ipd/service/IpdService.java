@@ -3,6 +3,9 @@ package com.ipd.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.ipd.billing.dto.SpecialDiscountRequestDTO;
+import com.ipd.billing.dto.SpecialDiscountResponseDTO;
+import com.ipd.billing.dto.UpdateIsDailyRequest;
 import com.ipd.dto.AdmissionChartPoint;
 import com.ipd.dto.IpdAdmissionUpdateRequest;
 import com.ipd.dto.IpdDashboardSummary;
@@ -65,6 +68,10 @@ public interface IpdService {
 	IpdAdmission updateAdmissionFully(Long id, IpdAdmissionUpdateRequest request);
 
 	List<IpdPaymentHistoryResponseDTO> getPaymentHistory(Long admissionId);
+
+	SpecialDiscountResponseDTO specialDiscounts(SpecialDiscountRequestDTO request);
+
+	String changeServiceDailyStatus(UpdateIsDailyRequest request);
 
 //	String closeBillOnDischarge(Long admissionId);
 

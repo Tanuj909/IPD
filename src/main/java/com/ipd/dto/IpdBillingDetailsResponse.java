@@ -30,6 +30,35 @@ public class IpdBillingDetailsResponse {
     private String billingStatus;
     private Double totalPayedAmmount;
     private Double dueTotalPayable;
+    private Double specialDiscountAmount;   
+    public Double getSpecialDiscountAmount() {
+		return specialDiscountAmount;
+	}
+	public void setSpecialDiscountAmount(Double specialDiscountAmount) {
+		this.specialDiscountAmount = specialDiscountAmount;
+	}
+	public Double getSpecialDiscountPercentage() {
+		return specialDiscountPercentage;
+	}
+	public void setSpecialDiscountPercentage(Double specialDiscountPercentage) {
+		this.specialDiscountPercentage = specialDiscountPercentage;
+	}
+	public Double getDueAfterSpecialDiscount() {
+		return dueAfterSpecialDiscount;
+	}
+	public void setDueAfterSpecialDiscount(Double dueAfterSpecialDiscount) {
+		this.dueAfterSpecialDiscount = dueAfterSpecialDiscount;
+	}
+	public String getSpecialDiscountReason() {
+		return specialDiscountReason;
+	}
+	public void setSpecialDiscountReason(String specialDiscountReason) {
+		this.specialDiscountReason = specialDiscountReason;
+	}
+	private Double specialDiscountPercentage;
+    private Double dueAfterSpecialDiscount;
+    private String specialDiscountReason;          
+
     
 
     // Inner DTO for BillingMaster (unchanged)
@@ -82,6 +111,7 @@ public class IpdBillingDetailsResponse {
         private LocalDateTime serviceAddDate;
         private Double gstPercentage;
         private Double gstAmount;
+        private String isDaily;
 
         // Getters and Setters
         public Long getId() { return id; }
@@ -107,6 +137,12 @@ public class IpdBillingDetailsResponse {
 		}
 		public void setGstPercentage(Double gstPercentage) {
 			this.gstPercentage = gstPercentage;
+		}
+		public String getIsDaily() {
+			return isDaily;
+		}
+		public void setIsDaily(String isDaily) {
+			this.isDaily = isDaily;
 		}
     }
 
