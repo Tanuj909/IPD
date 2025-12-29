@@ -3,6 +3,8 @@ package com.ipd.dto;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.ipd.billing.dto.IpdRoomAllocationDTO;
+
 public class IpdBillingDetailsResponse {
 
     private Long id;
@@ -25,6 +27,7 @@ public class IpdBillingDetailsResponse {
     private Double totalBeforeDiscount;
     private Double totalAfterDiscountAndGst;
     private List<IPDServiceUsageDTO> ipdServices;  // NEW: Add this field to match the JSON
+    private List<IpdRoomAllocationDTO> ipdRooms;
     private Double advanceAmount;
     private Double dueAmmount;
     private String billingStatus;
@@ -216,5 +219,11 @@ public class IpdBillingDetailsResponse {
 	}
 	public void setDueTotalPayable(Double dueTotalPayable) {
 		this.dueTotalPayable = dueTotalPayable;
+	}
+	public List<IpdRoomAllocationDTO> getIpdRooms() {
+		return ipdRooms;
+	}
+	public void setIpdRooms(List<IpdRoomAllocationDTO> ipdRooms) {
+		this.ipdRooms = ipdRooms;
 	}
 }

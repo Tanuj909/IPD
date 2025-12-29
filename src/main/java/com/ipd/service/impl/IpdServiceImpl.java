@@ -1660,6 +1660,9 @@ public class IpdServiceImpl implements IpdService {
                 admission.getAdmissionDate().toLocalDate(), LocalDate.now()) + 1);
 
         // === ROOM CHARGES ===
+        Integer bedNumber = admission.getBed().getBedNumber();
+        String roomNumber = admission.getBed().getRoom().getRoomNumber();
+        
         double roomCharges = admission.getBed().getRoom().getPrice() * daysAdmitted;
 
         // === DOCTOR FEES (from actual visits) ===
@@ -1724,7 +1727,8 @@ public class IpdServiceImpl implements IpdService {
         request.setAdmissionId(admissionId);
         request.setAdmissionDate(admission.getAdmissionDate().toLocalDate());
         request.setDischargeDate(LocalDate.now()); // Current date
-
+        request.setBedNumber(bedNumber);
+        request.setRoomNumber(roomNumber);
         request.setRoomRatePerDay(admission.getBed().getRoom().getPrice()); // Send per-day rate
         request.setNursingCharges(nursingCharges);        // Total
         request.setFoodCharges(foodCharges);              // Total
@@ -1771,6 +1775,8 @@ public class IpdServiceImpl implements IpdService {
         List<IpdMedication> meds = medicationRepo.findByAdmissionId(admissionId);
         List<IpdServiceRendered> services = serviceRepo.findByAdmissionId(admissionId);
 
+        Integer bedNumber = admission.getBed().getBedNumber();
+        String roomNumber = admission.getBed().getRoom().getRoomNumber();
         double roomCharges = admission.getBed().getRoom().getPrice() * daysAdmitted;
 
         double doctorFee = doctorVisitService.calculateTotalDoctorFees(admissionId);
@@ -1828,7 +1834,8 @@ public class IpdServiceImpl implements IpdService {
         request.setAdmissionId(admissionId);
         request.setAdmissionDate(admissionDate);
         request.setDischargeDate(today);
-
+        request.setBedNumber(bedNumber);
+        request.setRoomNumber(roomNumber);
         request.setRoomRatePerDay(admission.getBed().getRoom().getPrice());
         request.setNursingChargesPerDay(pricing.getNursingFee());
         request.setFoodChargesPerDay(pricing.getFoodFee());
