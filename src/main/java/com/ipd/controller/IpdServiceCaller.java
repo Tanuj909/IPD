@@ -1,7 +1,10 @@
 // IpdServiceCaller.java
 package com.ipd.controller;
-
+import com.ipd.Exception.BillingException;
+import com.ipd.Exception.ResourceNotFoundException;
 import com.ipd.dto.SendServiceRequest;
+import com.ipd.entity.IpdAdmission;
+import com.ipd.repository.IpdAdmissionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -23,11 +26,24 @@ public class IpdServiceCaller {
     public IpdServiceCaller(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
+    
+    @Autowired
+    private IpdAdmissionRepository ipdAdmissionRepo;
 
-    @PostMapping("/set/{billingId}")
+    @PostMapping("/set/{billingId}/admission/{admissionId}")
     public ResponseEntity<List<?>> addServicesToBilling(
             @PathVariable("billingId") Long billingId,
+            @PathVariable("admissionId") Long admissionId,
             @RequestBody SendServiceRequest request) {
+    	
+        IpdAdmission admission = ipdAdmissionRepo.findById(admissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Admission not found"));
+        
+        if (admission.getStatus().equals("TRANSFER_READY") || 
+        	    admission.getStatus().equals("TRANSFERRED")) {
+        	    
+        	    throw new BillingException("Cannot add service: Patient is either TRANS_READY or TRANSFERRED");
+        	}
 
         String url = BILLING_SERVICE_URL + "/" + billingId + "/services";
 

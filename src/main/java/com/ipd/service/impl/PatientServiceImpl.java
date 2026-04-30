@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.ipd.service.PatientService;
+import com.user.DTO.PatientDTO;
 import com.user.entity.Admin;
 import com.user.entity.Patient;
 import com.user.entity.Staff;
@@ -49,11 +50,14 @@ public class PatientServiceImpl implements PatientService {
     }
 
     @Override
-    public Patient getPatientById(User currentUser, Long patientId) {
+    public PatientDTO getPatientById(User currentUser, Long patientId) {
+
         Patient patient = patientRepository.findById(patientId)
                 .orElseThrow(() -> new EntityNotFoundException("Patient not found"));
+
         checkOwnership(currentUser, patient);
-        return patient;
+
+        return mapToDTO(patient);
     }
 
     @Override
@@ -66,5 +70,28 @@ public class PatientServiceImpl implements PatientService {
     public List<Patient> filterByEmail(User currentUser, String email) {
         Admin admin = resolveAdmin(currentUser);
         return patientRepository.findByAdminAndUser_EmailContainingIgnoreCase(admin, email);
+    }
+    
+    
+    private PatientDTO mapToDTO(Patient patient) {
+        return PatientDTO.builder()
+                .id(patient.getId())
+
+                // User fields
+                .userId(patient.getUser().getId())
+                .name(patient.getUser().getName())
+                .email(patient.getUser().getEmail())
+                .role(patient.getUser().getRole().name())
+
+                // Patient fields
+                .gender(patient.getGender())
+                .age(patient.getAge())
+                .address(patient.getAddress())
+                .phoneNumber(patient.getPhoneNumber())
+
+                // Admin
+                .adminId(patient.getAdmin().getId())
+
+                .build();
     }
 }

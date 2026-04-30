@@ -43,7 +43,7 @@ public class PatientController {
     }
 
     @GetMapping("/{patientId}")
-    public Patient getPatientById(@AuthenticationPrincipal UserDetails userDetails, @PathVariable Long patientId) {
+    public PatientDTO getPatientById(@AuthenticationPrincipal UserDetails userDetails, @PathVariable Long patientId) {
         return patientService.getPatientById(getCurrentUser(userDetails), patientId);
     }
 

@@ -1241,6 +1241,7 @@ import com.ipd.dto.IpdPaymentHistoryResponseDTO;
 import com.ipd.dto.IpdPaymentRequestDTO;
 import com.ipd.repository.*;
 import com.ipd.Exception.AccessDeniedException;
+import com.ipd.Exception.BillingException;
 import com.ipd.Exception.ResourceNotFoundException;
 import com.ipd.billing.dto.SpecialDiscountRequestDTO;
 import com.ipd.billing.dto.SpecialDiscountResponseDTO;
@@ -1324,6 +1325,9 @@ public class IpdServiceImpl implements IpdService {
 
     @Autowired
     private NotificationService notificationService;
+    
+    @Autowired
+    private IpdBedRepository ipdBedRepo;
     
     @Autowired
     private RestTemplate restTemplate;
@@ -1496,6 +1500,9 @@ public class IpdServiceImpl implements IpdService {
         admission.setHospital(room.getHospital());
         admission.setAdmissionDate(LocalDateTime.now());
         admission.setDischarged(false);
+        admission.setStatus("ADMITTED");
+        admission.setTransferredTo("NONE");
+        admission.setCurrentLocation("IPD");
         admission.setReasonForAdmission(reason);
         admission.setCreatedAt(LocalDateTime.now());
         admission.setCreatedBy(getCurrentUser().getId());
@@ -1540,40 +1547,58 @@ public class IpdServiceImpl implements IpdService {
         }
 
         // -------------------------
-        // ⭐ Update Room
+        // ⭐ Update Room + Bed
         // -------------------------
-        if (request.getRoomId() != null) {
+        if (request.getRoomId() != null && request.getBedId() != null) {
 
-            Long newRoomId = request.getRoomId();
-            Long oldRoomId = admission.getBed().getRoom().getId();
+            IpdRoom newRoom = ipdRoomRepo.findById(request.getRoomId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Room not found"));
 
-            if (!newRoomId.equals(oldRoomId)) {
+            IpdBed selectedBed = ipdBedRepo.findById(request.getBedId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Bed not found"));
 
-                IpdRoom oldRoom = admission.getBed().getRoom();
-                IpdRoom newRoom = ipdRoomRepo.findById(newRoomId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Room not found"));
+            // 🔥 VALIDATION: Bed must belong to room
+            if (!selectedBed.getRoom().getId().equals(newRoom.getId())) {
+                throw new IllegalStateException("Bed does not belong to selected room");
+            }
 
-                // Free old bed
-                IpdBed oldBed = admission.getBed();
-                oldBed.setOccupied(false);
+            IpdBed oldBed = admission.getBed();
 
-                // Find new free bed
-                IpdBed freeBed = newRoom.getBeds().stream()
-                        .filter(b -> !b.isOccupied())
-                        .findFirst()
-                        .orElseThrow(() -> new IllegalStateException("No empty bed available in new room"));
+            // 🔥 CASE: SAME BED → skip bed logic
+            if (oldBed != null && oldBed.getId().equals(selectedBed.getId())) {
+                // no bed change
+            } else {
 
-                freeBed.setOccupied(true);
+                // 🔥 VALIDATION: New bed must be free
+                if (selectedBed.isOccupied()) {
+                    throw new IllegalStateException("Selected bed is already occupied");
+                }
 
-                // Update room occupied counts
-                oldRoom.setOccupiedBeds((int) oldRoom.getBeds().stream().filter(IpdBed::isOccupied).count());
-                newRoom.setOccupiedBeds((int) newRoom.getBeds().stream().filter(IpdBed::isOccupied).count());
+                // 🔥 STEP 1: FREE OLD BED
+                if (oldBed != null && oldBed.isOccupied()) {
 
-                ipdRoomRepo.save(oldRoom);
+                    IpdRoom oldRoom = oldBed.getRoom();
+
+                    oldBed.setOccupied(false);
+
+                    oldRoom.setOccupiedBeds(
+                            (int) oldRoom.getBeds().stream().filter(IpdBed::isOccupied).count()
+                    );
+
+                    ipdRoomRepo.save(oldRoom);
+                }
+
+                // 🔥 STEP 2: ASSIGN NEW BED
+                selectedBed.setOccupied(true);
+                admission.setBed(selectedBed);
+
+                // 🔥 UPDATE NEW ROOM COUNT
+                newRoom.setOccupiedBeds(
+                        (int) newRoom.getBeds().stream().filter(IpdBed::isOccupied).count()
+                );
+
                 ipdRoomRepo.save(newRoom);
 
-                // admission.setRoom(newRoom);
-                admission.setBed(freeBed);
                 updated = true;
             }
         }
@@ -1586,6 +1611,9 @@ public class IpdServiceImpl implements IpdService {
             updated = true;
         }
 
+        // -------------------------
+        // ⭐ Update Timestamp
+        // -------------------------
         if (updated) {
             admission.setUpdatedAt(LocalDateTime.now());
         }
@@ -1760,10 +1788,16 @@ public class IpdServiceImpl implements IpdService {
         IpdAdmission admission = ipdAdmissionRepo.findById(admissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admission not found"));
 
-        if (admission.isDischarged()) {
-            throw new IllegalStateException("Cannot regenerate bill for discharged patient");
+        //Check if the Admission Status is 'TRANSFER_READY' OR 'TRANSFERRED';
+        if ("TRANSFER_READY".equals(admission.getStatus()) 
+        	    || "TRANSFERRED".equals(admission.getStatus())) {
+        	    throw new BillingException("Cannot regenerate bill: patient is transferred or ready for transfer");
+        	}
+        
+        if (admission.isDischarged() || admission.isOutcomeCreated()) {
+            throw new IllegalStateException("Operation not allowed: patient is discharged or outcome already created");
         }
-
+        
         IpdHospitalPricing pricing = pricingRepo.findByHospital_Id(admission.getHospital().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Hospital pricing not configured"));
 

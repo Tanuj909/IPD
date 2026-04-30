@@ -9,8 +9,7 @@ public class IpdAdmissionUpdateRequest {
 
     private Long doctorId;
     private Long roomId;
+    private Long bedId;   // 🔥 ADD THIS
     private String reasonForAdmission;
-    
-    private Long createdBy;  
-
+    private Long createdBy;
 }

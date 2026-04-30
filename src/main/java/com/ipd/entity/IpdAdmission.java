@@ -3,9 +3,7 @@ package com.ipd.entity;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -85,5 +83,15 @@ public class IpdAdmission {
     // ⭐ NEW: Outcome (Normal / Death / Referred / LAMA etc.)
     @OneToOne(mappedBy = "admission", cascade = CascadeType.ALL)
     private IpdOutcome outcome;
+    
+    @Column(name="status")
+    private String status;
+    
+    @Column(name="transferred_to")
+    private String transferredTo;
+    
+    @Column(name = "current_location")
+    private String currentLocation;
+    // IPD / OT / ICU / DISCHARGED
     
 }

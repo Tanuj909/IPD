@@ -1,5 +1,7 @@
 package com.ipd.service.impl;
 
+import com.ipd.Exception.BillingException;
+import com.ipd.Exception.ResourceNotFoundException;
 import com.ipd.entity.*;
 import com.ipd.enums.IsDaily;
 import com.ipd.repository.*;
@@ -23,6 +25,12 @@ public class IpdTrackingServiceImpl implements IpdTrackingService {
     @Transactional
     public IpdDoctorVisit addDoctorVisit(Long admissionId, Long doctorId, Double fee, String notes, IsDaily isDaily) {
         IpdAdmission admission = admissionRied(admissionId);
+        
+        if (admission.getStatus().equals("TRANSFER_READY") || 
+        	    admission.getStatus().equals("TRANSFERRED")) {
+        	    
+        	    throw new BillingException("Cannot add Doctor Visit: Patient is either TRANS_READY or TRANSFERRED");
+        	}
         IpdDoctorVisit visit = IpdDoctorVisit.builder()
                 .admission(admission)
                 .doctorId(doctorId)

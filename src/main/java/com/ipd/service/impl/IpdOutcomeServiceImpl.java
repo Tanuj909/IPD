@@ -2,15 +2,19 @@ package com.ipd.service.impl;
 
 import com.ipd.Exception.ResourceNotFoundException;
 import com.ipd.entity.IpdAdmission;
+import com.ipd.entity.IpdBed;
 import com.ipd.entity.IpdOutcome;
+import com.ipd.entity.IpdRoom;
 import com.ipd.repository.IpdAdmissionRepository;
 import com.ipd.repository.IpdOutcomeRepository;
+import com.ipd.repository.IpdRoomRepository;
 import com.ipd.service.IpdOutcomeService;
 import com.user.entity.User;
 import com.user.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +30,9 @@ public class IpdOutcomeServiceImpl implements IpdOutcomeService {
 	private final IpdAdmissionRepository admissionRepo;
 	private final RestTemplate restTemplate;
 	private final UserRepository userRepository;
+	
+	@Autowired
+	private IpdRoomRepository ipdRoomRepo;
 
 	@Value("${billing.base.url}")
 	private String billingBaseUrl;
@@ -81,6 +88,27 @@ public class IpdOutcomeServiceImpl implements IpdOutcomeService {
 		admission.setOutcomeCreated(true);
 		admission.setDischargeDate(LocalDateTime.now());
 		admissionRepo.save(admission);
+		
+		// ================= BED RELEASE =================
+
+		if (admission.getBed() != null) {
+
+		    IpdBed bed = admission.getBed();
+		    IpdRoom room = bed.getRoom();
+
+		    // free bed
+		    bed.setOccupied(false);
+
+		    // update room occupied count
+		    room.setOccupiedBeds(
+		            (int) room.getBeds().stream().filter(IpdBed::isOccupied).count()
+		    );
+
+		    ipdRoomRepo.save(room);
+
+		    // remove bed from admission (optional but recommended)
+//		    admission.setBed(null);
+		}
 
 	    // --- 4️⃣ CLOSE BILLING IN BILLING MICRO-SERVICE ---
 	    String closeBillUrl = billingBaseUrl + "ipd/close-bill/" + admissionId;
