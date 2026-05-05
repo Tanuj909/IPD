@@ -38,7 +38,7 @@ public class ReceivePatientServiceImpl implements ReceivePatientService {
     @Autowired
     private RestTemplate restTemplate;
 	
-//-------------------------------------API to receive Incoming Return Request from OT of Patient----------------------//
+//-------------------------------------API to receive Incoming Return Request from OT(OT)----------------------//
 	@Override
 	@Transactional
 	public void handleReturnRequest(OTToIPDReturnRequest request) {
@@ -92,7 +92,7 @@ public class ReceivePatientServiceImpl implements ReceivePatientService {
 
 	    /* ================= UPDATE STATE ================= */
 
-	    admission.setStatus("ACTIVE");
+	    admission.setStatus("ADMITTED");
 	    admission.setCurrentLocation("IPD");
 	    admission.setUpdatedAt(LocalDateTime.now());
 

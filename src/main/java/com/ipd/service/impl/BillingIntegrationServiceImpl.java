@@ -14,7 +14,7 @@ public class BillingIntegrationServiceImpl implements BillingIntegrationService{
 	@Autowired
 	private RestTemplate restTemplate;
 	
-    @Value("${billing.base.url}")   // <-- Inject value from application.properties
+    @Value("${billing.base.url}")   
     private String billingBaseUrl;
 
 	@Override

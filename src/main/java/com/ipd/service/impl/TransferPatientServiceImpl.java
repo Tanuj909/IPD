@@ -1,10 +1,7 @@
 package com.ipd.service.impl;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -16,7 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
+import com.ipd.Exception.PatientAlreadyTransferredException;
 import com.ipd.dto.TransferStatusResponse;
 import com.ipd.entity.IpdAdmission;
 import com.ipd.entity.IpdBed;
@@ -32,12 +29,13 @@ import com.ipd.service.TransferPatientService;
 import com.ipd.transfer.dto.OTTransferRequestDTO;
 import com.user.DTO.PatientDTO;
 import com.user.entity.User;
-
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TransferPatientServiceImpl implements TransferPatientService{
 	
     private final IpdAdmissionRepository ipdAdmissionRepo;
@@ -79,7 +77,7 @@ public class TransferPatientServiceImpl implements TransferPatientService{
     
 //-------------------------------------------Get Patient Transferred Destination----------------------------------------------//
     @Override
-    public String getCurrentLocation(Long admissionId) {
+    public String getTransferredLocation(Long admissionId) {
 
         IpdAdmission admission = ipdAdmissionRepo.findById(admissionId)
                 .orElseThrow(() -> new RuntimeException("Admission not found"));
@@ -103,9 +101,8 @@ public class TransferPatientServiceImpl implements TransferPatientService{
         /* ================= STEP 2: FREE BED ================= */
         IpdBed bed = admission.getBed();
 
-        if (bed == null) {
-            throw new IllegalStateException("No bed assigned");
-        }
+        if (bed != null) {
+
 
         bed.setOccupied(false);
 
@@ -118,6 +115,7 @@ public class TransferPatientServiceImpl implements TransferPatientService{
 
         // Remove bed from admission
         admission.setBed(null);
+        }
 
         /* ================= STEP 3: DOCTOR VISITS ================= */
         List<IpdDoctorVisit> visits = doctorVisitRepo.findByAdmissionId(admissionId);
@@ -164,6 +162,44 @@ public class TransferPatientServiceImpl implements TransferPatientService{
         ipdAdmissionRepo.save(admission);
     }
    
+    
+//-------------------------------------------Cancel Patient Transfer----------------------------------------------//
+  
+    @Override
+    @Transactional
+    public void cancelTransfer(Long admissionId) {
+
+        IpdAdmission admission = ipdAdmissionRepo.findById(admissionId)
+                .orElseThrow(() -> new RuntimeException("Admission not found"));
+
+        String status = admission.getStatus();
+
+        // 🔥 Only allow when TRANSFER_READY
+        if (!"TRANSFER_READY".equals(status)) {
+            throw new IllegalStateException(
+                "Cancel transfer allowed only when patient is TRANSFER_READY. Current status: " + status
+            );
+        }
+
+        // ✅ Revert to ADMITTED
+        admission.setStatus("ADMITTED");
+        admission.setUpdatedAt(LocalDateTime.now());
+        ipdAdmissionRepo.save(admission);
+
+        // ✅ Resume billing
+        try {
+            String url = billingBaseUrl + "ipd/resume-bill/" + admissionId;
+
+            restTemplate.exchange(url, HttpMethod.PUT, null, Void.class);
+
+        } catch (Exception e) {
+            log.error("Billing resume failed", e);
+            throw new IllegalStateException("Billing resume failed");
+        }
+    }
+    
+    
+    
     
 //-------------------------------------------Transfer Patient to OT----------------------------------------------//
     @Override

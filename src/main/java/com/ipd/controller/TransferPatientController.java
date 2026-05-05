@@ -36,7 +36,7 @@ public class TransferPatientController {
 	@GetMapping("/{admissionId}/location")
 	public ResponseEntity<String> getCurrentLocation(@PathVariable Long admissionId) {
 
-	    String location = transferPatientService.getCurrentLocation(admissionId);
+	    String location = transferPatientService.getTransferredLocation(admissionId);
 
 	    return ResponseEntity.ok(location);
 	}
@@ -48,6 +48,15 @@ public class TransferPatientController {
 		transferPatientService.makePatientReadyForTransfer(admissionId);
 
 	    return ResponseEntity.ok("Patient is ready for transfer");
+	}
+	
+//-------------------------------------------Cancel Patient Transfer----------------------------------------------//
+	@PutMapping("/{admissionId}/cancel-transfer")
+	public ResponseEntity<String> cancelTransfer(@PathVariable Long admissionId) {
+
+	    transferPatientService.cancelTransfer(admissionId);
+
+	    return ResponseEntity.ok("Transfer cancelled successfully");
 	}
 	
 //-------------------------------------------Transfer Patient to OT----------------------------------------------//

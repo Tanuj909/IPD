@@ -11,6 +11,10 @@ public interface TransferPatientService {
 
 	TransferStatusResponse getTransferStatus(Long admissionId);
 
-	String getCurrentLocation(Long admissionId);
+	String getTransferredLocation(Long admissionId);
+
+	void cancelTransfer(Long admissionId);
+
+
 
 }
